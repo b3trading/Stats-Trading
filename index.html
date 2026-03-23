@@ -80,39 +80,138 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
+    padding: 14px 20px;
     max-width: 1280px;
     margin: 0 auto;
+    gap: 12px;
   }
 
   .logo {
     font-family: var(--display);
-    font-size: 28px;
+    font-size: 26px;
     letter-spacing: 3px;
     color: var(--accent);
     text-shadow: 0 0 20px rgba(0,229,255,0.5);
+    flex-shrink: 0;
   }
 
-  .logo span { color: var(--text-dim); font-size: 12px; font-family: var(--mono); letter-spacing: 2px; display: block; margin-top: -4px; }
+  .logo span { color: var(--text-dim); font-size: 11px; font-family: var(--mono); letter-spacing: 2px; display: block; margin-top: -4px; }
 
-  nav { display: flex; gap: 4px; }
+  /* HAMBURGER BUTTON */
+  .nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    padding: 10px;
+    flex-shrink: 0;
+    transition: border-color 0.2s;
+  }
+
+  .nav-toggle:hover { border-color: var(--accent); }
+
+  .nav-toggle span {
+    display: block;
+    height: 1.5px;
+    background: var(--text);
+    transition: all 0.25s;
+    transform-origin: center;
+  }
+
+  .nav-toggle.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); background: var(--accent); }
+  .nav-toggle.open span:nth-child(2) { opacity: 0; }
+  .nav-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); background: var(--accent); }
+
+  /* DESKTOP NAV */
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: center;
+  }
 
   nav a {
     color: var(--text-dim);
     text-decoration: none;
-    padding: 6px 12px;
+    padding: 6px 10px;
     border: 1px solid transparent;
     font-size: 11px;
     letter-spacing: 1px;
     text-transform: uppercase;
     transition: all 0.2s;
     cursor: pointer;
+    white-space: nowrap;
+    font-family: var(--mono);
   }
 
   nav a:hover, nav a.active {
     color: var(--accent);
     border-color: var(--border);
     background: var(--surface);
+  }
+
+  /* MOBILE NAV */
+  @media (max-width: 900px) {
+    .nav-toggle { display: flex; }
+
+    nav {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(6,10,15,0.98);
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      gap: 0;
+      z-index: 99;
+      padding: 80px 24px 40px;
+      overflow-y: auto;
+    }
+
+    nav.open { display: flex; }
+
+    nav a {
+      font-size: 14px;
+      letter-spacing: 3px;
+      padding: 18px 20px;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      background: transparent;
+      text-align: left;
+    }
+
+    nav a:first-child { border-top: 1px solid var(--border); }
+
+    nav a:hover, nav a.active {
+      color: var(--accent);
+      background: var(--surface);
+      border-color: var(--border);
+    }
+
+    /* Close button inside mobile menu */
+    nav::before {
+      content: '✕  CLOSE';
+      display: block;
+      position: fixed;
+      top: 18px;
+      right: 20px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+    }
   }
 
   /* HERO */
@@ -555,7 +654,10 @@
       NQ EDGE
       <span>NASDAQ-100 E-MINI · STATISTICAL REFERENCE</span>
     </div>
-    <nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" onclick="toggleNav()">
+      <span></span><span></span><span></span>
+    </button>
+    <nav id="mainNav">
       <a href="#" class="active" onclick="showTab('home',this)">Home</a>
       <a href="#" onclick="showTab('aln',this)">ALN Sessions</a>
       <a href="#" onclick="showTab('ib',this)">IB Breaks</a>
@@ -565,8 +667,7 @@
       <a href="#" onclick="showTab('cont',this)">1H Continuation</a>
       <a href="#" onclick="showTab('judas',this)">Morning Judas</a>
       <a href="#" onclick="showTab('algo',this)">Algorithm</a>
-      <a href="nq-playbook.html" style="border:1px solid var(--accent);color:var(--accent);">Morning Playbook</a>
-
+      <a href="nq-playbook.html" style="color:var(--accent);border:1px solid var(--accent) !important;">Morning Playbook</a>
     </nav>
   </div>
 </header>
@@ -1260,7 +1361,34 @@
     document.getElementById(id).classList.add('active');
     if (el) el.classList.add('active');
     window.scrollTo({top: 0, behavior: 'smooth'});
+    closeNav();
   }
+
+  function toggleNav() {
+    const nav = document.getElementById('mainNav');
+    const btn = document.getElementById('navToggle');
+    const isOpen = nav.classList.toggle('open');
+    btn.classList.toggle('open', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+  }
+
+  function closeNav() {
+    const nav = document.getElementById('mainNav');
+    const btn = document.getElementById('navToggle');
+    if (!nav || !btn) return;
+    nav.classList.remove('open');
+    btn.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+  document.addEventListener('click', e => {
+    const nav = document.getElementById('mainNav');
+    const btn = document.getElementById('navToggle');
+    if (nav && nav.classList.contains('open') && !nav.contains(e.target) && !btn.contains(e.target)) {
+      closeNav();
+    }
+  });
 </script>
 </body>
 </html>
