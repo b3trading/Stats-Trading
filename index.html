@@ -68,7 +68,6 @@
   /* HEADER */
   header {
     border-bottom: 1px solid var(--border);
-    padding: 0;
     position: sticky;
     top: 0;
     background: rgba(6,10,15,0.97);
@@ -77,13 +76,17 @@
   }
 
   .header-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 12px 20px 0;
+  }
+
+  /* Row 1: logo + hamburger */
+  .header-row1 {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 20px;
-    max-width: 1280px;
-    margin: 0 auto;
-    gap: 12px;
+    margin-bottom: 8px;
   }
 
   .logo {
@@ -93,55 +96,29 @@
     color: var(--accent);
     text-shadow: 0 0 20px rgba(0,229,255,0.5);
     flex-shrink: 0;
+    line-height: 1;
   }
+  .logo span { color: var(--text-dim); font-size: 11px; font-family: var(--mono); letter-spacing: 2px; display: block; margin-top: 2px; }
 
-  .logo span { color: var(--text-dim); font-size: 11px; font-family: var(--mono); letter-spacing: 2px; display: block; margin-top: -4px; }
-
-  /* HAMBURGER BUTTON */
-  .nav-wrap { position: relative; }
-
-  .nav-toggle {
-    display: none;
-    flex-direction: column;
+  /* Row 2: desktop nav centered */
+  .header-row2 {
+    display: flex;
     justify-content: center;
-    gap: 5px;
-    width: 40px;
-    height: 40px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    cursor: pointer;
-    padding: 10px;
-    flex-shrink: 0;
-    transition: border-color 0.2s;
+    border-top: 1px solid var(--border);
   }
 
-  .nav-toggle:hover { border-color: var(--accent); }
-
-  .nav-toggle span {
-    display: block;
-    height: 1.5px;
-    background: var(--text);
-    transition: all 0.25s;
-    transform-origin: center;
-  }
-
-  .nav-toggle.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); background: var(--accent); }
-  .nav-toggle.open span:nth-child(2) { opacity: 0; }
-  .nav-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); background: var(--accent); }
-
-  /* DESKTOP NAV */
   nav {
     display: flex;
     flex-wrap: wrap;
-    gap: 2px;
-    align-items: center;
+    justify-content: center;
+    gap: 0;
   }
 
   nav a {
     color: var(--text-dim);
     text-decoration: none;
-    padding: 6px 10px;
-    border: 1px solid transparent;
+    padding: 8px 12px;
+    border-left: 1px solid transparent;
     font-size: 11px;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -149,15 +126,41 @@
     cursor: pointer;
     white-space: nowrap;
     font-family: var(--mono);
+    border-bottom: 2px solid transparent;
   }
+  nav a:first-child { border-left: none; }
+  nav a:hover { color: var(--accent); background: var(--surface); }
+  nav a.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0,229,255,0.04); }
 
-  nav a:hover, nav a.active {
-    color: var(--accent);
-    border-color: var(--border);
+  /* HAMBURGER + DROPDOWN */
+  .nav-wrap { position: relative; }
+
+  .nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 38px;
+    height: 38px;
     background: var(--surface);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    padding: 10px;
+    flex-shrink: 0;
+    transition: border-color 0.2s;
   }
+  .nav-toggle:hover { border-color: var(--accent); }
+  .nav-toggle span {
+    display: block;
+    height: 1.5px;
+    background: var(--text);
+    transition: all 0.25s;
+    transform-origin: center;
+  }
+  .nav-toggle.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); background: var(--accent); }
+  .nav-toggle.open span:nth-child(2) { opacity: 0; }
+  .nav-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); background: var(--accent); }
 
-  /* DROPDOWN NAV (mobile) */
   .nav-dropdown {
     display: none;
     position: absolute;
@@ -165,13 +168,12 @@
     right: 0;
     background: rgba(6,10,15,0.99);
     border: 1px solid var(--border);
-    min-width: 200px;
+    min-width: 210px;
     z-index: 200;
     box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-    animation: dropIn 0.15s ease;
   }
+  .nav-dropdown.open { display: block; animation: dropIn 0.15s ease; }
   @keyframes dropIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
-  .nav-dropdown.open { display: block; }
   .nav-dropdown a {
     display: block;
     padding: 13px 18px;
@@ -186,14 +188,11 @@
     cursor: pointer;
   }
   .nav-dropdown a:last-child { border-bottom: none; }
-  .nav-dropdown a:hover, .nav-dropdown a.active {
-    background: var(--surface);
-    color: var(--accent);
-  }
+  .nav-dropdown a:hover, .nav-dropdown a.active { background: var(--surface); color: var(--accent); }
 
-  @media (max-width: 900px) {
+  @media (max-width: 860px) {
+    .header-row2 { display: none; }
     .nav-toggle { display: flex; }
-    nav { display: none; }
   }
 
   /* HERO */
@@ -632,40 +631,44 @@
 
 <header>
   <div class="header-inner">
-    <div class="logo">
-      NQ EDGE
-      <span>NASDAQ-100 E-MINI · STATISTICAL REFERENCE</span>
-    </div>
-    <!-- Desktop nav -->
-    <nav id="mainNav">
-      <a href="#" class="active" onclick="showTab('home',this)">Home</a>
-      <a href="#" onclick="showTab('aln',this)">ALN Sessions</a>
-      <a href="#" onclick="showTab('ib',this)">IB Breaks</a>
-      <a href="#" onclick="showTab('noon',this)">Noon Curve</a>
-      <a href="#" onclick="showTab('rth',this)">RTH Breaks</a>
-      <a href="#" onclick="showTab('hour',this)">Hour Stats</a>
-      <a href="#" onclick="showTab('cont',this)">1H Continuation</a>
-      <a href="#" onclick="showTab('judas',this)">Morning Judas</a>
-      <a href="#" onclick="showTab('algo',this)">Algorithm</a>
-      <a href="nq-playbook.html" style="color:var(--accent);border:1px solid var(--accent) !important;">Playbook</a>
-    </nav>
-    <!-- Mobile hamburger + dropdown -->
-    <div class="nav-wrap">
-      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" onclick="toggleNav(event)">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="nav-dropdown" id="navDrop">
-        <a href="#" class="active" onclick="showTab('home',this);closeNav()">Home</a>
-        <a href="#" onclick="showTab('aln',this);closeNav()">ALN Sessions</a>
-        <a href="#" onclick="showTab('ib',this);closeNav()">IB Breaks</a>
-        <a href="#" onclick="showTab('noon',this);closeNav()">Noon Curve</a>
-        <a href="#" onclick="showTab('rth',this);closeNav()">RTH Breaks</a>
-        <a href="#" onclick="showTab('hour',this);closeNav()">Hour Stats</a>
-        <a href="#" onclick="showTab('cont',this);closeNav()">1H Continuation</a>
-        <a href="#" onclick="showTab('judas',this);closeNav()">Morning Judas</a>
-        <a href="#" onclick="showTab('algo',this);closeNav()">Algorithm</a>
-        <a href="nq-playbook.html" style="color:var(--accent);">Morning Playbook</a>
+    <!-- Row 1: logo + mobile hamburger -->
+    <div class="header-row1">
+      <div class="logo">
+        NQ EDGE
+        <span>NASDAQ-100 E-MINI · STATISTICAL REFERENCE</span>
       </div>
+      <div class="nav-wrap">
+        <button class="nav-toggle" id="navToggle" aria-label="Navigation" onclick="toggleNav(event)">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav-dropdown" id="navDrop">
+          <a href="#" class="active" onclick="showTab('home',this);closeNav()">Home</a>
+          <a href="#" onclick="showTab('aln',this);closeNav()">ALN Sessions</a>
+          <a href="#" onclick="showTab('ib',this);closeNav()">IB Breaks</a>
+          <a href="#" onclick="showTab('noon',this);closeNav()">Noon Curve</a>
+          <a href="#" onclick="showTab('rth',this);closeNav()">RTH Breaks</a>
+          <a href="#" onclick="showTab('hour',this);closeNav()">Hour Stats</a>
+          <a href="#" onclick="showTab('cont',this);closeNav()">1H Continuation</a>
+          <a href="#" onclick="showTab('judas',this);closeNav()">First 10min Candle</a>
+          <a href="#" onclick="showTab('algo',this);closeNav()">Algorithm</a>
+          <a href="nq-playbook.html" style="color:var(--accent);">Morning Playbook</a>
+        </div>
+      </div>
+    </div>
+    <!-- Row 2: desktop nav centered below logo -->
+    <div class="header-row2">
+      <nav id="mainNav">
+        <a href="#" class="active" onclick="showTab('home',this)">Home</a>
+        <a href="#" onclick="showTab('aln',this)">ALN Sessions</a>
+        <a href="#" onclick="showTab('ib',this)">IB Breaks</a>
+        <a href="#" onclick="showTab('noon',this)">Noon Curve</a>
+        <a href="#" onclick="showTab('rth',this)">RTH Breaks</a>
+        <a href="#" onclick="showTab('hour',this)">Hour Stats</a>
+        <a href="#" onclick="showTab('cont',this)">1H Continuation</a>
+        <a href="#" onclick="showTab('judas',this)">First 10min Candle</a>
+        <a href="#" onclick="showTab('algo',this)">Algorithm</a>
+        <a href="nq-playbook.html" style="color:var(--accent);border-bottom-color:var(--accent)!important;">Morning Playbook</a>
+      </nav>
     </div>
   </div>
 </header>
@@ -730,7 +733,7 @@
         <div class="stat-sub">9am hour closes green → NY session closes green 70% of time. First-hour direction drives full session bias with statistical edge.</div>
       </div>
       <div class="stat-card bear" onclick="showTab('judas',null)" style="cursor:pointer">
-        <div class="stat-label">Module 07 · Morning Judas</div>
+        <div class="stat-label">Module 07 · First 10min Candle</div>
         <div class="stat-value bear" style="font-size:28px;">FALSE SWING</div>
         <div class="stat-sub">9:30–9:40 move is a fake-out 36% of the time. Continuation 64%. The classic "10am reversal" quantified across a decade of data.</div>
       </div>
@@ -1108,7 +1111,7 @@
   <div id="judas" class="panel">
     <div class="panel-header">
       <div>
-        <div class="panel-title">MORNING JUDAS</div>
+        <div class="panel-title">FIRST 10-MIN CANDLE</div>
         <div class="panel-desc">How often does the initial 9:30am price movement act as a "fake-out"? A statistical look at the classic "10am reversal" and continuation vs false swing probabilities. 10-year sample (2014–2024).</div>
       </div>
       <div class="badge">2014–2024 · 9:30–10am</div>
@@ -1123,18 +1126,18 @@
         <div class="stat-sub">If first 10 minutes are up, continuation at 10am is the MORE likely outcome. Not a strong reversal setup.</div>
       </div>
       <div class="stat-card bear">
-        <div class="stat-label">9:40 > 9:30 (Up) → 10:00 &lt; 9:30 (False Swing / Judas)</div>
+        <div class="stat-label">9:40 > 9:30 (Up) → 10:00 &lt; 9:30 (False Swing / Fake-Out)</div>
         <div class="stat-value bear">36%</div>
-        <div class="stat-sub">The "up Judas" — false initial move, full reversal below the 9:30 open by 10:00am. Happens 36% of the time.</div>
+        <div class="stat-sub">The "up fake-out" — false initial move, full reversal below the 9:30 open by 10:00am. Happens 36% of the time.</div>
       </div>
     </div>
 
     <div class="section-divider"><h3>9:30 TO 9:40 — DOWN INITIAL MOVE</h3></div>
     <div class="scenario">
-      <div class="scenario-cond"><strong>Down Judas Setup</strong>9:40 price &lt; 9:30 price (initial 10min move is bearish). What happens by 10:00?</div>
+      <div class="scenario-cond"><strong>Down Fake-Out Setup</strong>9:40 price &lt; 9:30 price (initial 10min move is bearish). What happens by 10:00?</div>
       <div class="scenario-outcomes">
         <div class="prob-row"><span class="prob-label">Continuation — 10:00 &lt; 9:40 (stays lower)</span><div class="prob-bar-wrap"><div class="prob-bar" style="width:62%;background:var(--accent3)"></div></div><span class="prob-pct high">~62%</span></div>
-        <div class="prob-row"><span class="prob-label">Judas — 10:00 &gt; 9:30 (full reversal up)</span><div class="prob-bar-wrap"><div class="prob-bar" style="width:38%;background:var(--accent2)"></div></div><span class="prob-pct low">~38%</span></div>
+        <div class="prob-row"><span class="prob-label">Fake-Out — 10:00 &gt; 9:30 (full reversal up)</span><div class="prob-bar-wrap"><div class="prob-bar" style="width:38%;background:var(--accent2)"></div></div><span class="prob-pct low">~38%</span></div>
       </div>
     </div>
 
@@ -1142,7 +1145,7 @@
     <table class="data-table">
       <thead><tr><th>Time Window</th><th>Scenario</th><th>Outcome Probability</th><th>Notes</th></tr></thead>
       <tbody>
-        <tr><td>9:30–9:40 → by 10:00</td><td>Up initial → reversal below 9:30</td><td><span class="pct low">36%</span></td><td>Judas probability — moderate</td></tr>
+        <tr><td>9:30–9:40 → by 10:00</td><td>Up initial → reversal below 9:30</td><td><span class="pct low">36%</span></td><td>Fake-out probability — moderate</td></tr>
         <tr><td>9:30–9:40 → by 10:00</td><td>Up initial → continuation above 9:40</td><td><span class="pct high">64%</span></td><td>Continuation is more common</td></tr>
         <tr><td>9:30–10:00 → by 10:30</td><td>AM move reverses at IB close</td><td><span class="pct med">~40%</span></td><td>Confluence with IB close direction</td></tr>
         <tr><td>10am reversal window</td><td>High/low formed near 10am</td><td><span class="pct med">Moderate</span></td><td>Q1 extreme — sets Noon Curve</td></tr>
@@ -1150,7 +1153,7 @@
     </table>
 
     <div style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-top:8px;font-size:12px;color:var(--text-dim);font-family:var(--sans);line-height:1.8;">
-      <strong style="color:var(--accent)">INSIGHT:</strong> The initial 9:30 move is a continuation (not a reversal) more often than not — 62–64% vs ~36–38%. However, combine the "Judas" probability with other signals (IB close position, ALN session pattern, RTH open location) to identify high-conviction reversal setups when the initial move is likely fake.
+      <strong style="color:var(--accent)">INSIGHT:</strong> The initial 9:30 move is a continuation (not a reversal) more often than not — 62–64% vs ~36–38%. However, combine the "first 10-min candle fake-out" probability with other signals (IB close position, ALN session pattern, RTH open location) to identify high-conviction reversal setups when the initial move is likely fake.
     </div>
   </div>
 
@@ -1171,14 +1174,14 @@
       <div class="prob-row"><span class="prob-label">1. RTH Open Location (vs pRTH)</span><div class="prob-bar-wrap"><div class="prob-bar" style="width:83%;background:var(--accent3)"></div></div><span class="prob-pct high">83%</span></div>
       <div class="prob-row"><span class="prob-label">2. IB Close Position (upper/lower half)</span><div class="prob-bar-wrap"><div class="prob-bar" style="width:81%;background:var(--accent3)"></div></div><span class="prob-pct high">81%</span></div>
       <div class="prob-row"><span class="prob-label">3. 9am Hour Continuation Signal</span><div class="prob-bar-wrap"><div class="prob-bar" style="width:70%;background:var(--gold)"></div></div><span class="prob-pct med">70%</span></div>
-      <div class="prob-row"><span class="prob-label">4. Morning Judas (Continuation vs Reversal)</span><div class="prob-bar-wrap"><div class="prob-bar" style="width:64%;background:var(--gold)"></div></div><span class="prob-pct med">64%</span></div>
+      <div class="prob-row"><span class="prob-label">4. First 10min Candle (Continuation vs Reversal)</span><div class="prob-bar-wrap"><div class="prob-bar" style="width:64%;background:var(--gold)"></div></div><span class="prob-pct med">64%</span></div>
       <div class="prob-row"><span class="prob-label">5. IB Break Probability (any side by 4pm)</span><div class="prob-bar-wrap"><div class="prob-bar" style="width:96%;background:var(--accent3)"></div></div><span class="prob-pct high">96%</span></div>
     </div>
 
     <div class="code-block">
 <span class="cmt">// ═══════════════════════════════════════════════════════════════</span>
 <span class="cmt">// NQ EDGE — Statistical Probability Dashboard</span>
-<span class="cmt">// Combines: RTH Breaks | IB Breaks | 1H Continuation | Morning Judas</span>
+<span class="cmt">// Combines: RTH Breaks | IB Breaks | 1H Continuation | First 10min Candle</span>
 <span class="cmt">// Based on: nqstats.com — 10 year NQ Futures data (2014–2025)</span>
 <span class="cmt">// ═══════════════════════════════════════════════════════════════</span>
 <span class="kw">//@version=5</span>
@@ -1243,11 +1246,11 @@
 <span class="var">hr9_signal</span>  = <span class="var">hr9_green</span> ? <span class="str">"70% BULL CONT."</span> : <span class="str">"70% BEAR CONT."</span>
 
 <span class="cmt">// ─── MORNING JUDAS CHECK (9:30–9:40) ─────────────────────────</span>
-<span class="cmt">// 9:40 > 9:30 → continuation 64%, Judas 36%</span>
+<span class="cmt">// 9:40 > 9:30 → continuation 64%, fake-out 36%</span>
 <span class="var">open_930</span>    = <span class="fn">ta.valuewhen</span>(<span class="fn">hour</span>==<span class="num">9</span> <span class="fn">and</span> <span class="fn">minute</span>==<span class="num">30</span>, open, <span class="num">0</span>)
 <span class="var">close_940</span>   = <span class="fn">ta.valuewhen</span>(<span class="fn">hour</span>==<span class="num">9</span> <span class="fn">and</span> <span class="fn">minute</span>==<span class="num">40</span>, close, <span class="num">0</span>)
 <span class="var">judas_up</span>    = <span class="var">close_940</span> > <span class="var">open_930</span>
-<span class="var">judas_sig</span>   = <span class="var">judas_up</span> ? <span class="str">"64% UP CONT | 36% JUDAS"</span> : <span class="str">"62% DN CONT | 38% JUDAS"</span>
+<span class="var">candle10_sig</span>   = <span class="var">judas_up</span> ? <span class="str">"64% UP CONT | 36% JUDAS"</span> : <span class="str">"62% DN CONT | 38% JUDAS"</span>
 
 <span class="cmt">// ─── IB BREAK TRACKING ────────────────────────────────────────</span>
 <span class="var">ib_high_broken</span> = <span class="var">in_rth</span> <span class="fn">and</span> high > <span class="var">locked_ib_high</span>
@@ -1296,8 +1299,8 @@
 <span class="fn">table.cell</span>(<span class="var">dash</span>, <span class="num">1</span>, <span class="num">4</span>, <span class="fn">na</span>(<span class="var">hr9_close</span>) ? <span class="str">"PENDING"</span> : <span class="var">hr9_signal</span>,
      text_color= <span class="var">hr9_green</span> ? <span class="fn">color.lime</span> : <span class="fn">color.red</span>, text_size=size.tiny)
 
-<span class="fn">table.cell</span>(<span class="var">dash</span>, <span class="num">0</span>, <span class="num">5</span>, <span class="str">"Judas Risk"</span>, text_color=<span class="fn">color.silver</span>, text_size=size.tiny)
-<span class="fn">table.cell</span>(<span class="var">dash</span>, <span class="num">1</span>, <span class="num">5</span>, <span class="fn">na</span>(<span class="var">close_940</span>) ? <span class="str">"PENDING 9:40"</span> : <span class="var">judas_sig</span>,
+<span class="fn">table.cell</span>(<span class="var">dash</span>, <span class="num">0</span>, <span class="num">5</span>, <span class="str">"10min Candle"</span>, text_color=<span class="fn">color.silver</span>, text_size=size.tiny)
+<span class="fn">table.cell</span>(<span class="var">dash</span>, <span class="num">1</span>, <span class="num">5</span>, <span class="fn">na</span>(<span class="var">close_940</span>) ? <span class="str">"PENDING 9:40"</span> : <span class="var">candle10_sig</span>,
      text_color=<span class="fn">color.yellow</span>, text_size=size.tiny)
 
 <span class="fn">table.cell</span>(<span class="var">dash</span>, <span class="num">0</span>, <span class="num">6</span>, <span class="str">"IB Range"</span>, text_color=<span class="fn">color.silver</span>, text_size=size.tiny)
@@ -1320,7 +1323,7 @@
           <td><span class="pct high">~70–75%</span></td>
         </tr>
         <tr>
-          <td>RTH opens inside pRTH <br>+ IB close near mid <br>+ Judas risk flagged</td>
+          <td>RTH opens inside pRTH <br>+ IB close near mid <br>+ 10min candle conflict</td>
           <td style="color:var(--gold)">↕ CAUTION / REVERSAL WATCH</td>
           <td><span class="pct med">~50–55%</span></td>
         </tr>
@@ -1336,7 +1339,7 @@
       <strong style="color:var(--text-bright);display:block;margin-bottom:8px;">HOW TO USE THIS INDICATOR</strong>
       1. Paste the Pine Script into TradingView → Pine Editor → Add to chart on NQ1! (1min or 5min)<br>
       2. Before 9:30am: Note whether today opens inside or outside pRTH → sets 83%/73% framework<br>
-      3. At 9:40am: Judas risk signal fires — is the initial move a fake or continuation?<br>
+      3. At 9:40am: First 10min candle check — is the initial move a fake or continuation?<br>
       4. At 10:00am: IB is complete. Note IB close position (upper/lower half) → directional bias<br>
       5. At 10:00am: 9am hour signal fires → 70% continuation edge confirmed or denied<br>
       6. Trade setups: Look for IB break in the biased direction. Single break = 82% won't reverse.<br>

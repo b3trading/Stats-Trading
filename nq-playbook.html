@@ -594,6 +594,150 @@
     body { background: white; }
     .masthead { background: #000; -webkit-print-color-adjust: exact; }
   }
+
+  /* MASTHEAD NAV GROUP */
+  .masthead-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .back-link {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.4);
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 5px 10px;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .back-link:hover { color: #fff; border-color: rgba(255,255,255,0.4); }
+
+  /* HAMBURGER BUTTON (playbook) */
+  .ham-btn {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+    padding: 9px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .ham-btn:hover { background: rgba(255,255,255,0.15); }
+  .ham-btn span {
+    display: block;
+    height: 1.5px;
+    background: rgba(255,255,255,0.8);
+    transition: all 0.25s;
+    transform-origin: center;
+  }
+  .ham-btn.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+  .ham-btn.open span:nth-child(2) { opacity: 0; }
+  .ham-btn.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+  /* DROPDOWN (playbook) */
+  .nav-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: #0f0d0a;
+    border: 1px solid rgba(255,255,255,0.12);
+    min-width: 210px;
+    z-index: 300;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .nav-dropdown.open { display: block; animation: pbDropIn 0.15s ease; }
+  @keyframes pbDropIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+  .nav-dropdown a {
+    display: block;
+    padding: 12px 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-dropdown a:last-child { border-bottom: none; }
+  .nav-dropdown a:hover { background: rgba(255,255,255,0.06); color: #fff; }
+
+  /* SIGNAL SUMMARY BOX */
+  .signal-summary {
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .signal-summary-header {
+    background: var(--ink);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .signal-summary-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+  }
+  .summary-edit-note {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.3);
+  }
+  .signal-summary-body {
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .sig-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sig-row-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .sig-row-select {
+    padding: 7px 10px;
+    background: var(--bg);
+    border: 1.5px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink);
+    cursor: pointer;
+    width: 100%;
+    transition: border-color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c4b8aa'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+  .sig-row-select:focus { outline: none; border-color: var(--ink-dim); }
+  .sig-row-select.val-bull { border-color: var(--bull); color: var(--bull); font-weight: 700; }
+  .sig-row-select.val-bear { border-color: var(--bear); color: var(--bear); font-weight: 700; }
+  .sig-row-select.val-neutral { border-color: var(--neutral); color: var(--neutral); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -602,13 +746,32 @@
   <div class="masthead-inner">
     <div class="masthead-top">
       <div class="pub-name">NQ FUTURES · STATISTICAL PLAYBOOK</div>
-      <a href="index.html" style="font-family:'Syne Mono',monospace;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.4);text-decoration:none;border:1px solid rgba(255,255,255,0.15);padding:4px 10px;white-space:nowrap;transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">← STATS SITE</a>
+      <div class="masthead-nav-group">
+        <a href="index.html" class="back-link">← Stats Site</a>
+        <div class="nav-wrap" style="position:relative;">
+          <button class="ham-btn" id="hamBtn" onclick="togglePbNav(event)" aria-label="Navigation">
+            <span></span><span></span><span></span>
+          </button>
+          <div class="nav-dropdown" id="pbNavDrop">
+            <a href="index.html">Home — Stats Site</a>
+            <a href="index.html">ALN Sessions</a>
+            <a href="index.html">IB Breaks</a>
+            <a href="index.html">Noon Curve</a>
+            <a href="index.html">RTH Breaks</a>
+            <a href="index.html">Hour Stats</a>
+            <a href="index.html">1H Continuation</a>
+            <a href="index.html">First 10min Candle</a>
+            <a href="index.html">Algorithm</a>
+            <a href="nq-playbook.html" style="color:var(--accent);">Morning Playbook</a>
+          </div>
+        </div>
+      </div>
     </div>
     <div style="display:flex;justify-content:flex-end;margin-bottom:4px;">
       <div class="edition" id="dateStamp">Loading...</div>
     </div>
     <h1>MORNING<br><em>PLAYBOOK</em></h1>
-    <div class="masthead-sub">Two-phase checklist · Pre-IB setup + Post-IB trade · Based on 10yr NQ data</div>
+    <div class="masthead-sub">Pre-IB + Post-IB checklist · Select what price did · Auto-resets each trading day</div>
     <div class="progress-bar-wrap">
       <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
     </div>
@@ -631,7 +794,6 @@
 
   <div style="margin-bottom:32px;padding-top:8px;">
     <div class="section-head">
-      <div class="section-stamp pre">Phase 0</div>
       <div class="section-title pre">Pre-Market Context</div>
       <div class="section-time">Before 9:00am ET</div>
     </div>
@@ -643,7 +805,7 @@
   <!-- Step P0 -->
   <div class="step" id="s-p0" onclick="toggle('s-p0')">
     <div class="step-inner">
-      <div class="step-num">P0</div>
+      <div class="step-num">03</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">ALN Sessions · Overnight Read</div>
@@ -682,7 +844,7 @@
   <!-- Step P1 -->
   <div class="step" id="s-p1" onclick="toggle('s-p1')">
     <div class="step-inner">
-      <div class="step-num">P1</div>
+      <div class="step-num">04</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">RTH Open Location · Prior Day Range</div>
@@ -725,24 +887,23 @@
 
   <div style="margin-bottom:32px;">
     <div class="section-head">
-      <div class="section-stamp pre">Phase 1</div>
       <div class="section-title pre">Pre-IB Trade</div>
       <div class="section-time">9:30am → 10:30am ET</div>
     </div>
     <div class="section-desc">
-      The window before Initial Balance is set. You have one setup here — the <strong>Morning Judas / 9:30 Continuation check</strong>. Execute this at 9:40am exactly. If conditions don't align, skip it entirely and move to Phase 2. Partial entries only — you're trading into an incomplete range.
+      The window before Initial Balance is set. You have one setup here — the <strong>First 10-Minute Candle check at 9:40am</strong>. All three pre-IB signals must align: (1) ALN session bias, (2) pRTH open location, (3) first 10-min candle direction. If any one conflicts, skip this section and move to Post-IB. Half-size only — you're trading into an incomplete range.
     </div>
   </div>
 
   <!-- Step 1 -->
   <div class="step" id="s-1" onclick="toggle('s-1')">
     <div class="step-inner">
-      <div class="step-num">01</div>
+      <div class="step-num">03</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">9:30am · At the Bell</div>
         <div class="step-body">Note the exact 9:30 open price. Set a 10-minute timer.</div>
-        <div class="step-detail">Write down the 9:30 open. Do not trade. Let the first candle print. Your only job right now is to observe. The 9:30–9:40 window is the Judas candle — it will tell you continuation vs fake at 9:40.</div>
+        <div class="step-detail">Write down the 9:30 open. Do not trade. Let the first candle print. Your only job right now is to observe. The 9:30–9:40 candle — it will tell you continuation vs fake at 9:40.</div>
       </div>
     </div>
   </div>
@@ -750,11 +911,11 @@
   <!-- Step 2 -->
   <div class="step" id="s-2" onclick="toggle('s-2')">
     <div class="step-inner">
-      <div class="step-num">02</div>
+      <div class="step-num">04</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
-        <div class="step-label">9:40am · Judas Check</div>
-        <div class="step-body">Where is price vs the 9:30 open? Apply the Judas probabilities.</div>
+        <div class="step-label">9:40am · 10-Minute Candle Check</div>
+        <div class="step-body">Where is price vs the 9:30 open? Apply the first 10-minute candle probabilities.</div>
         <div class="step-detail">At exactly 9:40, compare current price to your 9:30 open note. This is your first decision gate.</div>
       </div>
     </div>
@@ -777,12 +938,12 @@
   <!-- Step 3 -->
   <div class="step" id="s-3" onclick="toggle('s-3')">
     <div class="step-inner">
-      <div class="step-num">03</div>
+      <div class="step-num">05</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">Confluence Gate · All 3 Must Align</div>
         <div class="step-body">Only take the pre-IB trade if ALL 3 signals point the same direction</div>
-        <div class="step-detail">This is your confirmation filter. You need: ALN session bias + pRTH open location + Judas direction — all three aligned. One misalignment = wait for Phase 2.</div>
+        <div class="step-detail">This is your confirmation filter. You need: ALN session bias + pRTH open location + 10min candle direction — all three aligned. One misalignment = skip to the Post-IB section.</div>
       </div>
     </div>
     <div class="branches">
@@ -800,8 +961,8 @@
       </div>
       <div class="branch neutral" style="grid-column:span 2;">
         <span class="branch-icon">❌</span>
-        <span class="branch-cond">Mixed signals → Skip Phase 1 entirely</span>
-        <span class="branch-body">No trade. Close your order entry window. Mark your chart. Wait for 10:30am and move to Phase 2 where the IB gives you a cleaner, higher-probability setup. Skipping is a position.</span>
+        <span class="branch-cond">Mixed signals → Skip to Post-IB</span>
+        <span class="branch-body">No trade. Close your order entry window. Mark your chart. Wait for 10:30am and move to the Post-IB section where the IB gives you a cleaner, higher-probability setup. Skipping is a position.</span>
         <span class="prob-tag neutral">No Trade</span>
       </div>
     </div>
@@ -813,7 +974,7 @@
     <div class="setup-title">↑ PRE-IB LONG PLAN</div>
     <div class="setup-rows">
       <div class="setup-row"><div class="setup-key">Entry</div><div class="setup-val">First pullback to 9:30 open OR to a prior session level after 9:40 confirmation <em>(don't chase)</em></div></div>
-      <div class="setup-row"><div class="setup-key">Stop</div><div class="setup-val">Below the 9:30 open by a small buffer <em>(if price reclaims 9:30 open = Judas confirmed, exit)</em></div></div>
+      <div class="setup-row"><div class="setup-key">Stop</div><div class="setup-val">Below the 9:30 open by a small buffer <em>(if price reclaims 9:30 open = first candle fake-out confirmed, exit)</em></div></div>
       <div class="setup-row"><div class="setup-key">Target 1</div><div class="setup-val">Prior day RTH high <em>(if open was inside pRTH)</em> or next significant swing high</div></div>
       <div class="setup-row"><div class="setup-key">Target 2</div><div class="setup-val">IB High once set at 10:30 <em>(trail stop to entry when T1 hit)</em></div></div>
       <div class="setup-row"><div class="setup-key">Size</div><div class="setup-val">Half normal size <em>(IB not yet set — incomplete range, higher uncertainty)</em></div></div>
@@ -826,7 +987,7 @@
     <div class="setup-title">↓ PRE-IB SHORT PLAN</div>
     <div class="setup-rows">
       <div class="setup-row"><div class="setup-key">Entry</div><div class="setup-val">First bounce back to 9:30 open OR to a resistance level after 9:40 confirmation <em>(don't chase)</em></div></div>
-      <div class="setup-row"><div class="setup-key">Stop</div><div class="setup-val">Above the 9:30 open by a small buffer <em>(if price reclaims 9:30 open = Judas confirmed, exit)</em></div></div>
+      <div class="setup-row"><div class="setup-key">Stop</div><div class="setup-val">Above the 9:30 open by a small buffer <em>(if price reclaims 9:30 open = first candle fake-out confirmed, exit)</em></div></div>
       <div class="setup-row"><div class="setup-key">Target 1</div><div class="setup-val">Prior day RTH low <em>(if open was inside pRTH)</em> or next significant swing low</div></div>
       <div class="setup-row"><div class="setup-key">Target 2</div><div class="setup-val">IB Low once set at 10:30 <em>(trail stop to entry when T1 hit)</em></div></div>
       <div class="setup-row"><div class="setup-key">Size</div><div class="setup-val">Half normal size <em>(IB not yet set — incomplete range, higher uncertainty)</em></div></div>
@@ -837,7 +998,7 @@
   <!-- Step 4 -->
   <div class="step" id="s-4" onclick="toggle('s-4')">
     <div class="step-inner">
-      <div class="step-num">04</div>
+      <div class="step-num">06</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">10:00am · 9am Hour Confirmation</div>
@@ -849,13 +1010,13 @@
       <div class="branch bull">
         <span class="branch-icon">🟢</span>
         <span class="branch-cond">9am hour closes GREEN</span>
-        <span class="branch-body">70% probability the NY session (4pm close) finishes green. If you're long from Phase 1, hold. If you skipped Phase 1, prepare for the IB long setup.</span>
+        <span class="branch-body">70% probability the NY session (4pm close) finishes green. If you're long from the pre-IB trade, hold. If you skipped it, prepare for the IB long setup.</span>
         <span class="prob-tag bull">70% Bull</span>
       </div>
       <div class="branch bear">
         <span class="branch-icon">🔴</span>
         <span class="branch-cond">9am hour closes RED</span>
-        <span class="branch-body">70% probability the NY session finishes red. If you're short from Phase 1, hold. If you skipped Phase 1, prepare for the IB short setup.</span>
+        <span class="branch-body">70% probability the NY session finishes red. If you're short from the pre-IB trade, hold. If you skipped it, prepare for the IB short setup.</span>
         <span class="prob-tag bear">70% Bear</span>
       </div>
     </div>
@@ -869,7 +1030,6 @@
 
   <div style="margin-bottom:32px;">
     <div class="section-head">
-      <div class="section-stamp post">Phase 2</div>
       <div class="section-title post">Post-IB Trade</div>
       <div class="section-time">10:30am → Noon ET</div>
     </div>
@@ -881,7 +1041,7 @@
   <!-- Step 5 -->
   <div class="step" id="s-5" onclick="toggle('s-5')">
     <div class="step-inner">
-      <div class="step-num">05</div>
+      <div class="step-num">07</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">10:30am · Lock the IB</div>
@@ -894,7 +1054,7 @@
   <!-- Step 6 -->
   <div class="step" id="s-6" onclick="toggle('s-6')">
     <div class="step-inner">
-      <div class="step-num">06</div>
+      <div class="step-num">08</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">IB Close Position · Directional Bias</div>
@@ -921,94 +1081,98 @@
   <!-- Step 7 -->
   <div class="step" id="s-7" onclick="toggle('s-7')">
     <div class="step-inner">
-      <div class="step-num">07</div>
+      <div class="step-num">09</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">Final Confluence Check · All Signals</div>
         <div class="step-body">Tally your 5 signals. Count bulls vs bears. Declare your session bias.</div>
-        <div class="step-detail">You now have 5 signals: ALN session, pRTH open, Judas direction, 9am hour close, IB close position. Count them. A 4-1 or 5-0 alignment is a high-conviction trade. A 3-2 split is acceptable. 2-3 or worse = reduce size significantly or skip.</div>
+        <div class="step-detail">You now have 5 signals: ALN session, pRTH open, 10min candle direction, 9am hour close, IB close position. Count them. A 4-1 or 5-0 alignment is a high-conviction trade. A 3-2 split is acceptable. 2-3 or worse = reduce size significantly or skip.</div>
       </div>
     </div>
   </div>
 
-  <!-- SIGNAL TALLY -->
-  <div class="tally" id="tallyBox">
-    <div class="tally-bias">
-      <div class="bias-word neutral" id="biasWord">NEUTRAL</div>
-      <div class="tally-label" style="margin-top:6px;">Session Bias</div>
+  <!-- SIGNAL SUMMARY BOX -->
+  <div class="signal-summary">
+    <div class="signal-summary-header">
+      <div class="signal-summary-title">Session Signal Summary — Change any selection below to update</div>
+      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <div class="bias-word neutral" id="biasWord">—</div>
+          <div style="font-family:var(--mono);font-size:9px;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;">Session Bias</div>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <div style="text-align:center;">
+            <div id="bullCount" style="font-size:36px;font-weight:800;line-height:1;color:var(--bull);">–</div>
+            <div style="font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;">Bull</div>
+          </div>
+          <div style="text-align:center;">
+            <div id="bearCount" style="font-size:36px;font-weight:800;line-height:1;color:var(--bear);">–</div>
+            <div style="font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;">Bear</div>
+          </div>
+          <div style="text-align:center;">
+            <div id="edgeRating" style="font-size:22px;font-weight:800;line-height:1;color:rgba(255,255,255,0.3);font-family:var(--sans);">–</div>
+            <div style="font-family:var(--mono);font-size:8px;letter-spacing:2px;color:rgba(255,255,255,0.4);text-transform:uppercase;">Edge</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="tally-section">
-      <div class="tally-count bull" id="bullCount">–</div>
-      <div class="tally-label">Bull Signals</div>
-    </div>
-    <div class="tally-section">
-      <div class="tally-count bear" id="bearCount">–</div>
-      <div class="tally-label">Bear Signals</div>
-    </div>
-    <div class="tally-section">
-      <div class="tally-count neutral" id="edgeRating">–</div>
-      <div class="tally-label">Edge Level</div>
-    </div>
-  </div>
-
-  <!-- Signal entry row -->
-  <div style="background:var(--paper);border:1px solid var(--rule);padding:20px 24px;margin-bottom:32px;">
-    <div style="font-family:var(--mono);font-size:10px;letter-spacing:3px;color:var(--ink-dim);margin-bottom:16px;text-transform:uppercase;">Enter Your 5 Signals</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;" id="signalInputs">
-      <div>
-        <div style="font-size:10px;letter-spacing:1px;color:var(--ink-dim);margin-bottom:6px;font-family:var(--mono);">ALN Session</div>
-        <select onchange="updateTally()" id="sig1" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink);cursor:pointer;">
-          <option value="">— select —</option>
+    <div class="signal-summary-body">
+      <div class="sig-row">
+        <div class="sig-row-label">① ALN Session</div>
+        <select class="sig-row-select" id="sig1" onchange="updateTally()">
+          <option value="">— not set —</option>
           <option value="bull">🟢 Bullish</option>
           <option value="bear">🔴 Bearish</option>
-          <option value="neutral">⚪ Neutral</option>
+          <option value="neutral">⚪ Neutral / Mixed</option>
         </select>
       </div>
-      <div>
-        <div style="font-size:10px;letter-spacing:1px;color:var(--ink-dim);margin-bottom:6px;font-family:var(--mono);">pRTH Open</div>
-        <select onchange="updateTally()" id="sig2" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink);cursor:pointer;">
-          <option value="">— select —</option>
+      <div class="sig-row">
+        <div class="sig-row-label">② pRTH Open</div>
+        <select class="sig-row-select" id="sig2" onchange="updateTally()">
+          <option value="">— not set —</option>
           <option value="bull">🟢 Above pRTH</option>
           <option value="bear">🔴 Below pRTH</option>
           <option value="neutral">⚪ Inside pRTH</option>
         </select>
       </div>
-      <div>
-        <div style="font-size:10px;letter-spacing:1px;color:var(--ink-dim);margin-bottom:6px;font-family:var(--mono);">Judas Direction</div>
-        <select onchange="updateTally()" id="sig3" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink);cursor:pointer;">
-          <option value="">— select —</option>
-          <option value="bull">🟢 Up Continuation</option>
-          <option value="bear">🔴 Down Continuation</option>
+      <div class="sig-row">
+        <div class="sig-row-label">③ First 10min Candle</div>
+        <select class="sig-row-select" id="sig3" onchange="updateTally()">
+          <option value="">— not set —</option>
+          <option value="bull">🟢 Up — aligns bull</option>
+          <option value="bear">🔴 Down — aligns bear</option>
+          <option value="neutral">⚪ Conflicts bias</option>
         </select>
       </div>
-      <div>
-        <div style="font-size:10px;letter-spacing:1px;color:var(--ink-dim);margin-bottom:6px;font-family:var(--mono);">9am Hour Close</div>
-        <select onchange="updateTally()" id="sig4" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink);cursor:pointer;">
-          <option value="">— select —</option>
+      <div class="sig-row">
+        <div class="sig-row-label">④ 9am Hour Close</div>
+        <select class="sig-row-select" id="sig4" onchange="updateTally()">
+          <option value="">— not set —</option>
           <option value="bull">🟢 Closed Green</option>
           <option value="bear">🔴 Closed Red</option>
         </select>
       </div>
-      <div>
-        <div style="font-size:10px;letter-spacing:1px;color:var(--ink-dim);margin-bottom:6px;font-family:var(--mono);">IB Close Position</div>
-        <select onchange="updateTally()" id="sig5" style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink);cursor:pointer;">
-          <option value="">— select —</option>
+      <div class="sig-row">
+        <div class="sig-row-label">⑤ IB Close Position</div>
+        <select class="sig-row-select" id="sig5" onchange="updateTally()">
+          <option value="">— not set —</option>
           <option value="bull">🟢 Upper Half (81%)</option>
           <option value="bear">🔴 Lower Half (74%)</option>
         </select>
       </div>
     </div>
+    <div id="summaryGuidance" style="padding:12px 20px 14px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:11px;color:var(--ink-dim);line-height:1.8;display:none;"></div>
   </div>
 
-  <!-- Step 8 -->
+    <!-- Step 8 -->
   <div class="step" id="s-8" onclick="toggle('s-8')">
     <div class="step-inner">
-      <div class="step-num">08</div>
+      <div class="step-num">10</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">IB Break Entry · The Trigger</div>
         <div class="step-body">Wait for price to actually BREAK the IB high or low. Then enter.</div>
-        <div class="step-detail">Do not anticipate the break — wait for a 1-minute or 5-minute candle to close outside the IB. A close outside is more reliable than a wick. The break should happen in the direction of your bias (Step 06 + 07). A break against your bias is a warning — skip or reverse only with extreme caution.</div>
+        <div class="step-detail">Do not anticipate the break — wait for a 1-minute or 5-minute candle to close outside the IB. A close outside is more reliable than a wick. The break should happen in the direction of your bias (Steps 07 + 08). A break against your bias is a warning — skip or reverse only with extreme caution.</div>
       </div>
     </div>
     <div class="branches">
@@ -1030,7 +1194,7 @@
   <!-- Step 9 -->
   <div class="step" id="s-9" onclick="toggle('s-9')">
     <div class="step-inner">
-      <div class="step-num">09</div>
+      <div class="step-num">11</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">Post-IB Targets · Extension Levels</div>
@@ -1088,7 +1252,7 @@
   <!-- Step 10 -->
   <div class="step" id="s-10" onclick="toggle('s-10')">
     <div class="step-inner">
-      <div class="step-num">10</div>
+      <div class="step-num">12</div>
       <div class="step-check"><div class="checkbox"></div></div>
       <div class="step-content">
         <div class="step-label">Noon Curve Awareness · 12pm–2pm</div>
@@ -1115,19 +1279,19 @@
     <h3>THE NON-NEGOTIABLES</h3>
     <div class="rule-item">
       <div class="rule-n">1</div>
-      <div class="rule-text"><strong>Phase 1 requires all 3 signals aligned.</strong> Two out of three is not a trade. One misalignment and you wait for Phase 2. The IB setup is cleaner — save your ammunition.</div>
+      <div class="rule-text"><strong>The Pre-IB trade requires all 3 signals aligned.</strong> Two out of three is not a trade. One misalignment and you skip to the Post-IB section. The IB setup is cleaner — save your ammunition.</div>
     </div>
     <div class="rule-item">
       <div class="rule-n">2</div>
-      <div class="rule-text"><strong>Phase 1 size is always half.</strong> IB is not set. You are trading into an incomplete range with higher uncertainty. Half size, every time, no exceptions.</div>
+      <div class="rule-text"><strong>Pre-IB size is always half.</strong> IB is not set. You are trading into an incomplete range with higher uncertainty. Half size, every time, no exceptions.</div>
     </div>
     <div class="rule-item">
       <div class="rule-n">3</div>
-      <div class="rule-text"><strong>If the Judas reverses — exit immediately.</strong> The 9:30 open is your anchor. If price crosses back through it against your position, the Judas has activated. Out. No averaging.</div>
+      <div class="rule-text"><strong>If the first 10min candle reverses — exit immediately.</strong> The 9:30 open is your anchor. If price crosses back through it against your position, the first candle fake-out has activated. Out. No averaging.</div>
     </div>
     <div class="rule-item">
       <div class="rule-n">4</div>
-      <div class="rule-text"><strong>96% break rate does NOT mean the break goes your direction.</strong> Wait for the IB close position bias (Steps 06) before entering. The 96% tells you it will break — the IB close position tells you which side.</div>
+      <div class="rule-text"><strong>96% break rate does NOT mean the break goes your direction.</strong> Wait for the IB close position bias (Step 08) before entering. The 96% tells you it will break — the IB close position tells you which side.</div>
     </div>
     <div class="rule-item">
       <div class="rule-n">5</div>
@@ -1146,24 +1310,27 @@
 </div>
 
 <script>
-  // Clock
+  // ── CLOCK ──────────────────────────────────────────────────
   function updateClock() {
-    const now = new Date();
-    const et = new Date(now.toLocaleString('en-US', {timeZone: 'America/New_York'}));
-    const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    const h = et.getHours().toString().padStart(2,'0');
-    const m = et.getMinutes().toString().padStart(2,'0');
-    const s = et.getSeconds().toString().padStart(2,'0');
+    const et = new Date(new Date().toLocaleString('en-US', {timeZone:'America/New_York'}));
+    const D = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    const M = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const pad = n => n.toString().padStart(2,'0');
     document.getElementById('clockDisplay').textContent =
-      `${days[et.getDay()]} ${months[et.getMonth()]} ${et.getDate()} ${et.getFullYear()} · ${h}:${m}:${s} ET`;
+      `${D[et.getDay()]} ${M[et.getMonth()]} ${et.getDate()} ${et.getFullYear()} · ${pad(et.getHours())}:${pad(et.getMinutes())}:${pad(et.getSeconds())} ET`;
     document.getElementById('dateStamp').textContent =
-      `${months[et.getMonth()]} ${et.getDate()}, ${et.getFullYear()}`;
+      `${M[et.getMonth()]} ${et.getDate()}, ${et.getFullYear()}`;
   }
   setInterval(updateClock, 1000);
   updateClock();
 
-  // Checklist
+  // ── DATE KEY (auto-reset per trading day) ──────────────────
+  function todayKey() {
+    const et = new Date(new Date().toLocaleString('en-US', {timeZone:'America/New_York'}));
+    return `nq-pb-${et.getFullYear()}-${et.getMonth()}-${et.getDate()}`;
+  }
+
+  // ── STEPS ──────────────────────────────────────────────────
   const steps = ['s-p0','s-p1','s-1','s-2','s-3','s-4','s-5','s-6','s-7','s-8','s-9','s-10'];
 
   function toggle(id) {
@@ -1182,6 +1349,7 @@
     document.getElementById('progressLabel').textContent = `${done} of ${total} steps complete`;
   }
 
+  // ── SAVE / LOAD (keyed to today's ET date) ─────────────────
   function saveState() {
     const state = {};
     steps.forEach(id => {
@@ -1190,21 +1358,20 @@
     ['sig1','sig2','sig3','sig4','sig5'].forEach(id => {
       state[id] = document.getElementById(id)?.value || '';
     });
-    try { localStorage.setItem('nq-playbook', JSON.stringify(state)); } catch(e) {}
+    try { localStorage.setItem(todayKey(), JSON.stringify(state)); } catch(e) {}
   }
 
   function loadState() {
     try {
-      const raw = localStorage.getItem('nq-playbook');
-      if (!raw) return;
+      const raw = localStorage.getItem(todayKey());
+      if (!raw) return; // New day = auto fresh start
       const state = JSON.parse(raw);
       steps.forEach(id => {
         if (state[id]) document.getElementById(id)?.classList.add('done');
       });
       ['sig1','sig2','sig3','sig4','sig5'].forEach(id => {
-        if (state[id] && document.getElementById(id)) {
-          document.getElementById(id).value = state[id];
-        }
+        const el = document.getElementById(id);
+        if (el && state[id]) { el.value = state[id]; styleSelect(el); }
       });
     } catch(e) {}
     updateProgress();
@@ -1215,51 +1382,109 @@
     steps.forEach(id => document.getElementById(id)?.classList.remove('done'));
     ['sig1','sig2','sig3','sig4','sig5'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.value = '';
+      if (el) { el.value = ''; styleSelect(el); }
     });
-    try { localStorage.removeItem('nq-playbook'); } catch(e) {}
+    try { localStorage.removeItem(todayKey()); } catch(e) {}
     updateProgress();
     updateTally();
   }
 
-  // Signal Tally
+  // ── SELECT STYLING ─────────────────────────────────────────
+  function styleSelect(el) {
+    el.classList.remove('val-bull','val-bear','val-neutral');
+    if (el.value === 'bull') el.classList.add('val-bull');
+    else if (el.value === 'bear') el.classList.add('val-bear');
+    else if (el.value === 'neutral') el.classList.add('val-neutral');
+  }
+
+  // ── TALLY + GUIDANCE ───────────────────────────────────────
   function updateTally() {
     const ids = ['sig1','sig2','sig3','sig4','sig5'];
     let bulls = 0, bears = 0, neutrals = 0;
     ids.forEach(id => {
-      const v = document.getElementById(id)?.value;
+      const el = document.getElementById(id);
+      if (!el) return;
+      styleSelect(el);
+      const v = el.value;
       if (v === 'bull') bulls++;
       else if (v === 'bear') bears++;
       else if (v === 'neutral') neutrals++;
     });
 
-    document.getElementById('bullCount').textContent = bulls > 0 ? bulls : '–';
-    document.getElementById('bearCount').textContent = bears > 0 ? bears : '–';
-
     const filled = bulls + bears + neutrals;
-    let edge = '–';
-    let biasWord = 'NEUTRAL';
-    let biasClass = 'neutral';
+    document.getElementById('bullCount').textContent = filled > 0 ? bulls : '–';
+    document.getElementById('bearCount').textContent = filled > 0 ? bears : '–';
 
-    if (filled >= 3) {
+    let edge = '–', biasWord = '—', biasClass = 'neutral';
+    let guidance = '';
+
+    if (filled >= 2) {
       const diff = Math.abs(bulls - bears);
-      if (diff >= 4) { edge = 'STRONG'; }
-      else if (diff === 3) { edge = 'GOOD'; }
-      else if (diff === 2) { edge = 'MODERATE'; }
-      else if (diff === 1) { edge = 'WEAK'; }
-      else { edge = 'NONE'; }
+      if (diff >= 4)      { edge = 'STRONG'; }
+      else if (diff === 3){ edge = 'GOOD'; }
+      else if (diff === 2){ edge = 'MODERATE'; }
+      else if (diff === 1){ edge = 'WEAK'; }
+      else                { edge = 'NONE'; }
 
-      if (bulls > bears) { biasWord = 'BULLISH'; biasClass = 'bull'; }
+      if (bulls > bears)      { biasWord = 'BULLISH'; biasClass = 'bull'; }
       else if (bears > bulls) { biasWord = 'BEARISH'; biasClass = 'bear'; }
-      else { biasWord = 'MIXED'; biasClass = 'neutral'; }
+      else                    { biasWord = 'MIXED';   biasClass = 'neutral'; }
+
+      // Guidance text
+      const dir = biasWord.toLowerCase();
+      if (edge === 'STRONG' || edge === 'GOOD') {
+        guidance = `${bulls} of 5 signals ${dir}. <strong>High-conviction ${dir} day.</strong> Take the IB break in the ${dir} direction at full size. After the break, 82% probability the other side does NOT break.`;
+      } else if (edge === 'MODERATE') {
+        guidance = `${bulls > bears ? bulls : bears} of 5 signals lean ${dir}. <strong>Moderate edge — trade ${dir} at half size.</strong> Tighten stops and scale out at T1 earlier than normal.`;
+      } else if (edge === 'WEAK') {
+        guidance = `Signals nearly split (${bulls} bull / ${bears} bear). <strong>Minimal edge — quarter size maximum or skip.</strong> Let the IB break confirm direction before committing.`;
+      } else {
+        guidance = `Signals evenly split — <strong>no statistical edge today. Consider sitting out.</strong> If you trade, use minimal size and strict stops. There will be cleaner setups.`;
+      }
     }
 
     document.getElementById('edgeRating').textContent = edge;
+    document.getElementById('edgeRating').style.color =
+      edge === 'STRONG' ? 'var(--bull)' : edge === 'GOOD' ? '#4a8a5a' :
+      edge === 'MODERATE' ? 'var(--neutral)' : edge === 'WEAK' || edge === 'NONE' ? 'var(--bear)' : 'rgba(255,255,255,0.3)';
+
     const bw = document.getElementById('biasWord');
     bw.textContent = biasWord;
-    bw.className = 'bias-word ' + biasClass;
+    bw.style.color = biasClass === 'bull' ? 'var(--bull)' : biasClass === 'bear' ? 'var(--bear)' : 'rgba(255,255,255,0.3)';
+
+    const gEl = document.getElementById('summaryGuidance');
+    if (guidance && gEl) {
+      gEl.innerHTML = guidance;
+      gEl.style.display = 'block';
+    } else if (gEl) {
+      gEl.style.display = 'none';
+    }
+
     saveState();
   }
+
+  // ── HAMBURGER NAV (playbook) ───────────────────────────────
+  function togglePbNav(e) {
+    e.stopPropagation();
+    const drop = document.getElementById('pbNavDrop');
+    const btn  = document.getElementById('hamBtn');
+    const open = drop.classList.toggle('open');
+    btn.classList.toggle('open', open);
+  }
+  document.addEventListener('click', () => {
+    const d = document.getElementById('pbNavDrop');
+    const b = document.getElementById('hamBtn');
+    if (d) d.classList.remove('open');
+    if (b) b.classList.remove('open');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      const d = document.getElementById('pbNavDrop');
+      const b = document.getElementById('hamBtn');
+      if (d) d.classList.remove('open');
+      if (b) b.classList.remove('open');
+    }
+  });
 
   loadState();
 </script>
