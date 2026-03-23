@@ -98,6 +98,8 @@
   .logo span { color: var(--text-dim); font-size: 11px; font-family: var(--mono); letter-spacing: 2px; display: block; margin-top: -4px; }
 
   /* HAMBURGER BUTTON */
+  .nav-wrap { position: relative; }
+
   .nav-toggle {
     display: none;
     flex-direction: column;
@@ -155,63 +157,43 @@
     background: var(--surface);
   }
 
-  /* MOBILE NAV */
+  /* DROPDOWN NAV (mobile) */
+  .nav-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: rgba(6,10,15,0.99);
+    border: 1px solid var(--border);
+    min-width: 200px;
+    z-index: 200;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    animation: dropIn 0.15s ease;
+  }
+  @keyframes dropIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+  .nav-dropdown.open { display: block; }
+  .nav-dropdown a {
+    display: block;
+    padding: 13px 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s, color 0.15s;
+    cursor: pointer;
+  }
+  .nav-dropdown a:last-child { border-bottom: none; }
+  .nav-dropdown a:hover, .nav-dropdown a.active {
+    background: var(--surface);
+    color: var(--accent);
+  }
+
   @media (max-width: 900px) {
     .nav-toggle { display: flex; }
-
-    nav {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(6,10,15,0.98);
-      flex-direction: column;
-      align-items: stretch;
-      justify-content: center;
-      gap: 0;
-      z-index: 99;
-      padding: 80px 24px 40px;
-      overflow-y: auto;
-    }
-
-    nav.open { display: flex; }
-
-    nav a {
-      font-size: 14px;
-      letter-spacing: 3px;
-      padding: 18px 20px;
-      border: none;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
-      background: transparent;
-      text-align: left;
-    }
-
-    nav a:first-child { border-top: 1px solid var(--border); }
-
-    nav a:hover, nav a.active {
-      color: var(--accent);
-      background: var(--surface);
-      border-color: var(--border);
-    }
-
-    /* Close button inside mobile menu */
-    nav::before {
-      content: '✕  CLOSE';
-      display: block;
-      position: fixed;
-      top: 18px;
-      right: 20px;
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing: 3px;
-      color: var(--text-dim);
-      cursor: pointer;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-    }
+    nav { display: none; }
   }
 
   /* HERO */
@@ -654,9 +636,7 @@
       NQ EDGE
       <span>NASDAQ-100 E-MINI · STATISTICAL REFERENCE</span>
     </div>
-    <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" onclick="toggleNav()">
-      <span></span><span></span><span></span>
-    </button>
+    <!-- Desktop nav -->
     <nav id="mainNav">
       <a href="#" class="active" onclick="showTab('home',this)">Home</a>
       <a href="#" onclick="showTab('aln',this)">ALN Sessions</a>
@@ -667,8 +647,26 @@
       <a href="#" onclick="showTab('cont',this)">1H Continuation</a>
       <a href="#" onclick="showTab('judas',this)">Morning Judas</a>
       <a href="#" onclick="showTab('algo',this)">Algorithm</a>
-      <a href="nq-playbook.html" style="color:var(--accent);border:1px solid var(--accent) !important;">Morning Playbook</a>
+      <a href="nq-playbook.html" style="color:var(--accent);border:1px solid var(--accent) !important;">Playbook</a>
     </nav>
+    <!-- Mobile hamburger + dropdown -->
+    <div class="nav-wrap">
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation" onclick="toggleNav(event)">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="nav-dropdown" id="navDrop">
+        <a href="#" class="active" onclick="showTab('home',this);closeNav()">Home</a>
+        <a href="#" onclick="showTab('aln',this);closeNav()">ALN Sessions</a>
+        <a href="#" onclick="showTab('ib',this);closeNav()">IB Breaks</a>
+        <a href="#" onclick="showTab('noon',this);closeNav()">Noon Curve</a>
+        <a href="#" onclick="showTab('rth',this);closeNav()">RTH Breaks</a>
+        <a href="#" onclick="showTab('hour',this);closeNav()">Hour Stats</a>
+        <a href="#" onclick="showTab('cont',this);closeNav()">1H Continuation</a>
+        <a href="#" onclick="showTab('judas',this);closeNav()">Morning Judas</a>
+        <a href="#" onclick="showTab('algo',this);closeNav()">Algorithm</a>
+        <a href="nq-playbook.html" style="color:var(--accent);">Morning Playbook</a>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -1357,38 +1355,29 @@
 <script>
   function showTab(id, el) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+    document.querySelectorAll('nav a, .nav-dropdown a').forEach(a => a.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     if (el) el.classList.add('active');
     window.scrollTo({top: 0, behavior: 'smooth'});
-    closeNav();
   }
 
-  function toggleNav() {
-    const nav = document.getElementById('mainNav');
-    const btn = document.getElementById('navToggle');
-    const isOpen = nav.classList.toggle('open');
-    btn.classList.toggle('open', isOpen);
-    document.body.style.overflow = isOpen ? 'hidden' : '';
+  function toggleNav(e) {
+    e.stopPropagation();
+    const drop = document.getElementById('navDrop');
+    const btn  = document.getElementById('navToggle');
+    const open = drop.classList.toggle('open');
+    btn.classList.toggle('open', open);
   }
 
   function closeNav() {
-    const nav = document.getElementById('mainNav');
-    const btn = document.getElementById('navToggle');
-    if (!nav || !btn) return;
-    nav.classList.remove('open');
-    btn.classList.remove('open');
-    document.body.style.overflow = '';
+    const drop = document.getElementById('navDrop');
+    const btn  = document.getElementById('navToggle');
+    if (drop) drop.classList.remove('open');
+    if (btn)  btn.classList.remove('open');
   }
 
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
-  document.addEventListener('click', e => {
-    const nav = document.getElementById('mainNav');
-    const btn = document.getElementById('navToggle');
-    if (nav && nav.classList.contains('open') && !nav.contains(e.target) && !btn.contains(e.target)) {
-      closeNav();
-    }
-  });
+  document.addEventListener('click', () => closeNav());
 </script>
 </body>
 </html>
