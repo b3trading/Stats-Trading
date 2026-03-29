@@ -1,0 +1,565 @@
+// ═══════════════════════════════════════════════════════════════
+// NQ STATS — FULL 7-MODULE PROBABILITY DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+// Modules:
+//   01 · ALN Sessions      — Asia › London › NY relationships
+//   02 · IB Breaks         — Initial Balance bias & break status
+//   03 · Noon Curve        — Time-of-day quarter windows
+//   04 · RTH Breaks        — Today's open vs prior RTH range
+//   05 · Hour Sweep        — Sweep & retrace by hour
+//   06 · 1H Continuation   — 9am pre-market hour signal
+//   07 · First 10min Candle — 9:30–9:40 continuation vs fake-out
+//
+// Based on 10-year NQ Futures study (2014–2025) — nqstats.com
+// Use on NQ1! with 1min or 5min timeframe
+// ═══════════════════════════════════════════════════════════════
+
+//@version=5
+indicator("NQ Stats — Full Dashboard", overlay=true, max_lines_count=100, max_labels_count=100)
+
+// ─── INPUTS ───────────────────────────────────────────────────
+show_ib_levels  = input.bool(true,  "Show IB High/Low/Mid Lines",     group="Chart Levels")
+show_prth       = input.bool(true,  "Show pRTH High/Low Lines",       group="Chart Levels")
+show_extensions = input.bool(true,  "Show IB Extension Targets",      group="Chart Levels")
+tbl_pos_input   = input.string("Top Right", "Table Position",
+     options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group="Display")
+
+tbl_pos = tbl_pos_input == "Top Right"    ? position.top_right    :
+          tbl_pos_input == "Top Left"     ? position.top_left     :
+          tbl_pos_input == "Bottom Right" ? position.bottom_right :
+          position.bottom_left
+
+// ─── TIMEZONE & SESSION FLAGS ─────────────────────────────────
+tz        = "America/New_York"
+in_rth    = not na(time("1", "0930-1600", tz))
+in_ib     = not na(time("1", "0930-1030", tz))
+in_london = not na(time("1", "0200-0800", tz))
+in_asia   = not na(time("1", "1800-0200", tz))   // 6pm–2am, spans midnight
+
+// ─── TRANSITIONS ──────────────────────────────────────────────
+new_rth   = in_rth    and not in_rth[1]
+ib_ended  = not in_ib and in_ib[1]
+rth_ended = not in_rth and in_rth[1]
+lon_start = in_london and not in_london[1]
+asia_start = in_asia  and not in_asia[1]
+
+cur_h = hour(time, tz)
+cur_m = minute(time, tz)
+
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 01 · ALN SESSIONS
+// Asia 6pm–2am ET | London 2am–8am ET | NY 9:30am–4pm ET
+// ═══════════════════════════════════════════════════════════════
+
+// Track Asia session high/low; reset each session start
+var float _asia_h = na
+var float _asia_l = na
+if asia_start
+    _asia_h := high
+    _asia_l := low
+else if in_asia
+    _asia_h := math.max(nz(_asia_h, high), high)
+    _asia_l := math.min(nz(_asia_l, low),  low)
+
+// Lock Asia range when London opens (2am ET)
+var float asia_h = na
+var float asia_l = na
+if lon_start
+    asia_h := _asia_h
+    asia_l := _asia_l
+
+// Track London session high/low; reset each London start
+var float _lon_h = na
+var float _lon_l = na
+if lon_start
+    _lon_h := high
+    _lon_l := low
+else if in_london
+    _lon_h := math.max(nz(_lon_h, high), high)
+    _lon_l := math.min(nz(_lon_l, low),  low)
+
+// Lock London range when RTH opens (9:30am ET)
+var float lon_h = na
+var float lon_l = na
+if new_rth
+    lon_h := _lon_h
+    lon_l := _lon_l
+
+// ALN signal: How did London trade relative to Asia?
+aln_broke_high = not na(lon_h) and not na(asia_h) and lon_h > asia_h and lon_l >= asia_l
+aln_broke_low  = not na(lon_h) and not na(asia_h) and lon_l < asia_l and lon_h <= asia_h
+aln_engulfs    = not na(lon_h) and not na(asia_h) and lon_h > asia_h and lon_l < asia_l
+aln_inside     = not na(lon_h) and not na(asia_h) and lon_h <= asia_h and lon_l >= asia_l
+
+aln_sig  = aln_broke_high ? 1 : aln_broke_low ? -1 : 0
+aln_desc = na(lon_h)       ? "PENDING 2AM" :
+           aln_broke_high  ? "LON BROKE ASIA HIGH ▲" :
+           aln_broke_low   ? "LON BROKE ASIA LOW ▼" :
+           aln_engulfs     ? "LON ENGULFS ASIA ◆" :
+           aln_inside      ? "LON INSIDE ASIA ◆" : "—"
+aln_prob = na(lon_h)       ? "—" :
+           aln_broke_high  ? "72% BULL NY CONT" :
+           aln_broke_low   ? "68% BEAR NY CONT" :
+           aln_engulfs     ? "55% CONT | 45% REVERSAL" :
+           aln_inside      ? "95% NY BREAKS OUT" : "—"
+
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 02 · IB BREAKS
+// Initial Balance: 9:30–10:30am ET
+// ═══════════════════════════════════════════════════════════════
+
+// Track IB range; reset at RTH open
+var float _ib_h = na
+var float _ib_l = na
+if new_rth
+    _ib_h := high
+    _ib_l := low
+else if in_ib
+    _ib_h := math.max(nz(_ib_h, high), high)
+    _ib_l := math.min(nz(_ib_l, low),  low)
+
+// Lock IB at 10:30am
+var float ib_h = na
+var float ib_l = na
+if ib_ended
+    ib_h := _ib_h
+    ib_l := _ib_l
+
+ib_range = not na(ib_h) ? ib_h - ib_l : na
+ib_mid   = not na(ib_h) ? (ib_h + ib_l) / 2 : na
+
+// IB close position (last close inside IB window)
+var float ib_close_val = na
+if new_rth
+    ib_close_val := na
+if ib_ended
+    ib_close_val := close[1]
+
+ib_bull = not na(ib_close_val) and not na(ib_mid) and ib_close_val > ib_mid
+ib_bear = not na(ib_close_val) and not na(ib_mid) and ib_close_val <= ib_mid
+ib_sig  = na(ib_close_val) ? 0 : (ib_bull ? 1 : -1)
+
+// IB break status (live, updates within RTH)
+ib_high_broken = in_rth and not na(ib_h) and high > ib_h
+ib_low_broken  = in_rth and not na(ib_l) and low  < ib_l
+
+ib_bias_desc  = na(ib_h)      ? "IB FORMING..." :
+                ib_bull        ? "UPPER CLOSE — 81% HIGH BREAKS ▲" :
+                                 "LOWER CLOSE — 74% LOW BREAKS ▼"
+ib_bias_prob  = na(ib_h)      ? "—" :
+                ib_bull        ? "81% IB HIGH BREAKS" :
+                                 "74% IB LOW BREAKS"
+
+ib_break_col  = ib_high_broken ? 1 : ib_low_broken ? -1 : 0
+ib_break_desc = na(ib_h)        ? "IB PENDING..." :
+               ib_high_broken   ? "IB HIGH BROKEN ▲" :
+               ib_low_broken    ? "IB LOW BROKEN ▼" :
+                                  "AWAITING BREAK"
+ib_break_prob = na(ib_h)        ? "—" :
+               ib_high_broken or ib_low_broken ? "CONFIRMED" :
+                                                  "96% BY 4PM"
+
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 03 · NOON CURVE  (Time-of-Day Windows)
+// Q1 8–10am  |  Q2 10am–Noon  |  Q3 Noon–2pm  |  Q4 2–4pm
+// ═══════════════════════════════════════════════════════════════
+
+cur_t = cur_h * 100 + cur_m
+in_q1 = cur_t >= 800  and cur_t < 1000
+in_q2 = cur_t >= 1000 and cur_t < 1200
+in_q3 = cur_t >= 1200 and cur_t < 1400
+in_q4 = cur_t >= 1400 and cur_t < 1600
+
+// Q2 = continuation window (most common daily extreme forms here)
+// Q3 = reversal watch (Noon Curve — 60% Q4 reverses Q3 extreme)
+// Q4 = power hour (directional close)
+noon_sig  = in_q2 ? 1 : in_q3 ? -1 : 0
+noon_desc = in_q1 ? "Q1 · 8–10AM — IB FORMATION" :
+            in_q2 ? "Q2 · 10AM–NOON — DAILY EXTREME WATCH" :
+            in_q3 ? "Q3 · NOON–2PM — REVERSAL WINDOW" :
+            in_q4 ? "Q4 · 2–4PM — POWER HOUR" :
+                    "PRE-SESSION"
+noon_prob = in_q1 ? "HIGH VOLATILITY — DIRECTIONAL BIAS" :
+            in_q2 ? "MOST COMMON TIME FOR DAILY HIGH/LOW" :
+            in_q3 ? "60%+ Q4 REVERSES Q3 EXTREME" :
+            in_q4 ? "DIRECTIONAL MOVE INTO CLOSE" : "—"
+
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 04 · RTH BREAKS  (Today's Open vs Prior RTH Range)
+// ═══════════════════════════════════════════════════════════════
+
+// Track current RTH range
+var float _rth_h = na
+var float _rth_l = na
+if new_rth
+    _rth_h := high
+    _rth_l := low
+else if in_rth
+    _rth_h := math.max(nz(_rth_h, high), high)
+    _rth_l := math.min(nz(_rth_l, low),  low)
+
+// Save prior RTH H/L at end of session
+var float prth_h = na
+var float prth_l = na
+if rth_ended
+    prth_h := _rth_h
+    prth_l := _rth_l
+
+// Today's RTH open price
+var float rth_open = na
+if new_rth
+    rth_open := open
+
+rth_gap_up   = not na(rth_open) and not na(prth_h) and rth_open > prth_h
+rth_gap_down = not na(rth_open) and not na(prth_l) and rth_open < prth_l
+rth_inside   = not na(rth_open) and not na(prth_h) and rth_open <= prth_h and rth_open >= prth_l
+
+rth_sig  = rth_gap_up ? 1 : rth_gap_down ? -1 : 0
+rth_desc = na(rth_open) or na(prth_h)  ? "PENDING 9:30" :
+           rth_gap_up                   ? "GAP UP — ABOVE pRTH ▲" :
+           rth_gap_down                 ? "GAP DOWN — BELOW pRTH ▼" :
+           rth_inside                   ? "INSIDE pRTH ◆" : "—"
+rth_prob = na(rth_open) or na(prth_h)  ? "—" :
+           rth_gap_up or rth_gap_down  ? "83% DIRECTIONAL — NO REVERSE" :
+           rth_inside                  ? "73% BREAKS ONE SIDE" : "—"
+
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 05 · HOUR STATS  (Prior-Hour Sweep & Retrace)
+// ═══════════════════════════════════════════════════════════════
+
+var float _cur_hour_h = na
+var float _cur_hour_l = na
+var float prv_hour_h  = na
+var float prv_hour_l  = na
+var float cur_hr_open = na
+
+new_h_rth = in_rth and cur_h != hour(time[1], tz)
+
+if new_rth
+    // New RTH day: reset all hour tracking
+    prv_hour_h  := na
+    prv_hour_l  := na
+    cur_hr_open := open
+    _cur_hour_h := high
+    _cur_hour_l := low
+else if new_h_rth
+    // New hour within RTH: shift current → prior
+    prv_hour_h  := _cur_hour_h
+    prv_hour_l  := _cur_hour_l
+    cur_hr_open := open
+    _cur_hour_h := high
+    _cur_hour_l := low
+else if in_rth
+    _cur_hour_h := math.max(nz(_cur_hour_h, high), high)
+    _cur_hour_l := math.min(nz(_cur_hour_l, low),  low)
+
+// Did current hour open inside prior hour range?
+h_open_inside = not na(cur_hr_open) and not na(prv_hour_h) and
+                cur_hr_open <= prv_hour_h and cur_hr_open >= prv_hour_l
+
+// Sweep detection: price has moved beyond prior hour H or L
+swept_ph_high = h_open_inside and not na(prv_hour_h) and high > prv_hour_h
+swept_ph_low  = h_open_inside and not na(prv_hour_l) and low  < prv_hour_l
+
+// Time remaining in hour determines retrace probability
+seg_label = cur_m < 20 ? "EARLY IN HOUR — HIGH RETRACE ODDS" :
+            cur_m < 40 ? "MID HOUR — MODERATE RETRACE ODDS" :
+                         "LATE HOUR — LOW RETRACE ODDS"
+
+hour_sig  = swept_ph_high ? -1 : swept_ph_low ? 1 : 0
+hour_desc = not in_rth          ? "—" :
+            na(prv_hour_h)      ? "BUILDING FIRST HOUR" :
+            not h_open_inside   ? "OPEN OUTSIDE PRIOR HOUR" :
+            swept_ph_high       ? "SWEPT PRIOR HIGH ▼ RETRACE WATCH" :
+            swept_ph_low        ? "SWEPT PRIOR LOW ▲ RETRACE WATCH" :
+                                  "INSIDE PRIOR HOUR — NO SWEEP YET"
+hour_prob = not in_rth               ? "—" :
+            swept_ph_high or swept_ph_low ? seg_label :
+                                           "AWAITING SWEEP"
+
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 06 · 1H CONTINUATION  (9am Pre-Market Hour)
+// 9:00–10:00am ET  |  Strong edge: 70% continuation
+// ═══════════════════════════════════════════════════════════════
+
+var float hr9_o = na
+var float hr9_c = na
+if new_rth
+    hr9_o := na
+    hr9_c := na
+if in_rth and cur_h == 9 and cur_m == 0
+    hr9_o := open
+if in_rth and cur_h == 10 and cur_m == 0
+    hr9_c := close[1]   // close of last 9am-hour bar
+
+hr9_green = not na(hr9_c) and not na(hr9_o) and hr9_c > hr9_o
+hr9_red   = not na(hr9_c) and not na(hr9_o) and hr9_c < hr9_o
+hr9_sig   = na(hr9_c) ? 0 : (hr9_green ? 1 : -1)
+hr9_desc  = na(hr9_o) ? "PENDING 9:00" :
+            na(hr9_c) ? "9AM CANDLE OPEN — PENDING 10AM" :
+            hr9_green  ? "9AM GREEN — BULL ▲" :
+            hr9_red    ? "9AM RED — BEAR ▼" :
+                         "9AM FLAT ◆"
+hr9_prob  = na(hr9_c) ? "—" :
+            hr9_green  ? "70% NY SESSION GREEN" :
+                         "70% NY SESSION RED"
+
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE 07 · FIRST 10-MIN CANDLE  (9:30–9:40)
+// Continuation 64% up | 62% down  vs  Judas/Fake 36% | 38%
+// ═══════════════════════════════════════════════════════════════
+
+var float open930  = na
+var float close940 = na
+if new_rth
+    open930  := na
+    close940 := na
+if in_rth and cur_h == 9 and cur_m == 30
+    open930 := open
+if in_rth and cur_h == 9 and cur_m == 40
+    close940 := close
+
+c10_up   = not na(close940) and not na(open930) and close940 > open930
+c10_down = not na(close940) and not na(open930) and close940 < open930
+c10_sig  = na(close940) ? 0 : (c10_up ? 1 : -1)
+c10_desc = na(open930)  ? "PENDING 9:30" :
+           na(close940) ? "9:30 OPEN — PENDING 9:40" :
+           c10_up       ? "UP 9:30→9:40 — BULL CANDLE ▲" :
+           c10_down     ? "DOWN 9:30→9:40 — BEAR CANDLE ▼" :
+                          "FLAT 9:30→9:40"
+c10_prob = na(close940) ? "—" :
+           c10_up       ? "64% BULL CONT | 36% JUDAS REVERSAL" :
+           c10_down     ? "62% BEAR CONT | 38% JUDAS REVERSAL" : "—"
+
+
+// ═══════════════════════════════════════════════════════════════
+// SIGNAL TALLY  (5 primary signals scored Green / Red / Neutral)
+// ALN · RTH · IB Bias · 9am Hour · 10min Candle
+// ═══════════════════════════════════════════════════════════════
+
+bull_pts = (aln_sig  == 1 ? 1 : 0) +
+           (rth_sig  == 1 ? 1 : 0) +
+           (ib_sig   == 1 ? 1 : 0) +
+           (hr9_sig  == 1 ? 1 : 0) +
+           (c10_sig  == 1 ? 1 : 0)
+
+bear_pts = (aln_sig  == -1 ? 1 : 0) +
+           (rth_sig  == -1 ? 1 : 0) +
+           (ib_sig   == -1 ? 1 : 0) +
+           (hr9_sig  == -1 ? 1 : 0) +
+           (c10_sig  == -1 ? 1 : 0)
+
+verdict = bull_pts >= 4 ? "FULL SIZE  LONG ▲" :
+          bear_pts >= 4 ? "FULL SIZE  SHORT ▼" :
+          bull_pts == 3 ? "HALF SIZE  LONG ▲" :
+          bear_pts == 3 ? "HALF SIZE  SHORT ▼" :
+                          "NO TRADE — HANDS OFF ◆"
+
+verdict_col = bull_pts >= 4 ? color.new(#39ff14, 0) :
+              bear_pts >= 4 ? color.new(#ff4444, 0) :
+              bull_pts == 3 ? color.new(color.lime, 15) :
+              bear_pts == 3 ? color.new(color.red,  15) :
+              color.new(#ffd700, 0)
+
+
+// ═══════════════════════════════════════════════════════════════
+// CHART LEVELS
+// ═══════════════════════════════════════════════════════════════
+
+// IB High / Low / Mid
+plot(show_ib_levels and in_rth and not na(ib_h)   ? ib_h   : na,
+     "IB High", color=color.new(color.lime,   20), linewidth=2, style=plot.style_linebr)
+plot(show_ib_levels and in_rth and not na(ib_l)   ? ib_l   : na,
+     "IB Low",  color=color.new(color.red,    20), linewidth=2, style=plot.style_linebr)
+plot(show_ib_levels and in_rth and not na(ib_mid) ? ib_mid : na,
+     "IB Mid",  color=color.new(color.gray,   55), linewidth=1, style=plot.style_linebr)
+
+// Prior RTH High / Low
+plot(show_prth and in_rth and not na(prth_h) ? prth_h : na,
+     "pRTH High", color=color.new(color.orange, 40), linewidth=1, style=plot.style_linebr)
+plot(show_prth and in_rth and not na(prth_l) ? prth_l : na,
+     "pRTH Low",  color=color.new(color.orange, 40), linewidth=1, style=plot.style_linebr)
+
+// IB Extension Targets (direction-aware)
+plot(show_extensions and in_rth and ib_bull and not na(ib_range) ? ib_h + ib_range * 0.5 : na,
+     "IB +50%",  color=color.new(color.lime, 60), linewidth=1, style=plot.style_linebr)
+plot(show_extensions and in_rth and ib_bull and not na(ib_range) ? ib_h + ib_range * 1.0 : na,
+     "IB +100%", color=color.new(color.lime, 45), linewidth=1, style=plot.style_linebr)
+plot(show_extensions and in_rth and ib_bull and not na(ib_range) ? ib_h + ib_range * 2.0 : na,
+     "IB +200%", color=color.new(color.lime, 65), linewidth=1, style=plot.style_linebr)
+plot(show_extensions and in_rth and ib_bear and not na(ib_range) ? ib_l - ib_range * 0.5 : na,
+     "IB -50%",  color=color.new(color.red,  60), linewidth=1, style=plot.style_linebr)
+plot(show_extensions and in_rth and ib_bear and not na(ib_range) ? ib_l - ib_range * 1.0 : na,
+     "IB -100%", color=color.new(color.red,  45), linewidth=1, style=plot.style_linebr)
+plot(show_extensions and in_rth and ib_bear and not na(ib_range) ? ib_l - ib_range * 2.0 : na,
+     "IB -200%", color=color.new(color.red,  65), linewidth=1, style=plot.style_linebr)
+
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD TABLE  — 3 columns × 15 rows
+// ═══════════════════════════════════════════════════════════════
+
+// ── Color palette
+C_BULL    = color.new(#39ff14, 0)      // neon green  — long bias
+C_BEAR    = color.new(#ff4444, 0)      // red         — short bias
+C_NEUTRAL = color.new(#ffd700, 0)      // gold        — neutral / hands off
+C_PENDING = color.new(color.gray, 20)  // gray        — waiting for data
+C_TITLE   = color.new(#00b4d8, 0)      // teal        — header text
+C_HEADER  = color.new(#0a0e17, 0)      // dark navy   — header background
+C_BG      = color.new(#0d1117, 8)      // near-black  — cell background
+C_BORDER  = color.new(color.gray, 58)  // border
+C_WHITE   = color.white
+C_SILVER  = color.silver
+C_DIM     = color.new(color.gray, 25)
+
+// ── Helper: map signal int → display color
+sig_color(s) =>
+    s == 1 ? C_BULL : s == -1 ? C_BEAR : C_PENDING
+
+// ── Table (3 cols, 15 rows)
+var table T = table.new(tbl_pos, 3, 15,
+     bgcolor=C_BG, border_color=C_BORDER, border_width=1,
+     frame_color=C_BORDER, frame_width=1)
+
+// ─── ROW 0: Column headers ────────────────────────────────────
+table.cell(T, 0, 0, "NQ STATS · MODULE",
+     bgcolor=C_HEADER, text_color=C_TITLE, text_size=size.small, text_halign=text.align_left)
+table.cell(T, 1, 0, "SIGNAL",
+     bgcolor=C_HEADER, text_color=C_TITLE, text_size=size.small)
+table.cell(T, 2, 0, "PROBABILITY",
+     bgcolor=C_HEADER, text_color=C_TITLE, text_size=size.small)
+
+// ─── ROW 1: ALN Sessions ─────────────────────────────────────
+table.cell(T, 0, 1, "01 · ALN SESSIONS",
+     text_color=C_SILVER, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 1, aln_desc,
+     text_color=sig_color(aln_sig), text_size=size.tiny)
+table.cell(T, 2, 1, aln_prob,
+     text_color=sig_color(aln_sig), text_size=size.tiny)
+
+// ─── ROW 2: IB Bias ──────────────────────────────────────────
+table.cell(T, 0, 2, "02 · IB BIAS",
+     text_color=C_SILVER, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 2, ib_bias_desc,
+     text_color=sig_color(ib_sig), text_size=size.tiny)
+table.cell(T, 2, 2, ib_bias_prob,
+     text_color=sig_color(ib_sig), text_size=size.tiny)
+
+// ─── ROW 3: IB Break Status ──────────────────────────────────
+table.cell(T, 0, 3, "02 · IB BREAK",
+     text_color=C_SILVER, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 3, ib_break_desc,
+     text_color=sig_color(ib_break_col), text_size=size.tiny)
+table.cell(T, 2, 3, ib_break_prob,
+     text_color=C_WHITE, text_size=size.tiny)
+
+// ─── ROW 4: Noon Curve ───────────────────────────────────────
+table.cell(T, 0, 4, "03 · NOON CURVE",
+     text_color=C_SILVER, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 4, noon_desc,
+     text_color=sig_color(noon_sig), text_size=size.tiny)
+table.cell(T, 2, 4, noon_prob,
+     text_color=sig_color(noon_sig), text_size=size.tiny)
+
+// ─── ROW 5: RTH Breaks ───────────────────────────────────────
+table.cell(T, 0, 5, "04 · RTH BREAKS",
+     text_color=C_SILVER, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 5, rth_desc,
+     text_color=sig_color(rth_sig), text_size=size.tiny)
+table.cell(T, 2, 5, rth_prob,
+     text_color=sig_color(rth_sig), text_size=size.tiny)
+
+// ─── ROW 6: Hour Sweep ───────────────────────────────────────
+table.cell(T, 0, 6, "05 · HOUR SWEEP",
+     text_color=C_SILVER, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 6, hour_desc,
+     text_color=sig_color(hour_sig), text_size=size.tiny)
+table.cell(T, 2, 6, hour_prob,
+     text_color=C_DIM, text_size=size.tiny)
+
+// ─── ROW 7: 9am Hour ─────────────────────────────────────────
+table.cell(T, 0, 7, "06 · 9AM HOUR",
+     text_color=C_SILVER, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 7, hr9_desc,
+     text_color=sig_color(hr9_sig), text_size=size.tiny)
+table.cell(T, 2, 7, hr9_prob,
+     text_color=sig_color(hr9_sig), text_size=size.tiny)
+
+// ─── ROW 8: First 10min Candle ───────────────────────────────
+table.cell(T, 0, 8, "07 · 10MIN CANDLE",
+     text_color=C_SILVER, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 8, c10_desc,
+     text_color=sig_color(c10_sig), text_size=size.tiny)
+table.cell(T, 2, 8, c10_prob,
+     text_color=sig_color(c10_sig), text_size=size.tiny)
+
+// ─── ROW 9: Divider ──────────────────────────────────────────
+table.cell(T, 0, 9, "─────────────────────",
+     text_color=C_DIM, text_size=size.tiny)
+table.cell(T, 1, 9, "─────────────────────────────────────────────────",
+     text_color=C_DIM, text_size=size.tiny)
+table.cell(T, 2, 9, "──────────────────────────",
+     text_color=C_DIM, text_size=size.tiny)
+
+// ─── ROW 10: Bull count ──────────────────────────────────────
+table.cell(T, 0, 10, "BULL SIGNALS",
+     text_color=C_BULL, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 10, str.tostring(bull_pts) + " of 5 aligned BULL",
+     text_color=C_BULL, text_size=size.small)
+table.cell(T, 2, 10, "4–5 = FULL SIZE LONG",
+     text_color=C_DIM, text_size=size.tiny)
+
+// ─── ROW 11: Bear count ──────────────────────────────────────
+table.cell(T, 0, 11, "BEAR SIGNALS",
+     text_color=C_BEAR, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 11, str.tostring(bear_pts) + " of 5 aligned BEAR",
+     text_color=C_BEAR, text_size=size.small)
+table.cell(T, 2, 11, "3 = HALF SIZE",
+     text_color=C_DIM, text_size=size.tiny)
+
+// ─── ROW 12: Divider ─────────────────────────────────────────
+table.cell(T, 0, 12, "─────────────────────",
+     text_color=C_DIM, text_size=size.tiny)
+table.cell(T, 1, 12, "─────────────────────────────────────────────────",
+     text_color=C_DIM, text_size=size.tiny)
+table.cell(T, 2, 12, "──────────────────────────",
+     text_color=C_DIM, text_size=size.tiny)
+
+// ─── ROW 13: VERDICT ─────────────────────────────────────────
+table.cell(T, 0, 13, "VERDICT",
+     bgcolor=C_HEADER, text_color=verdict_col, text_size=size.small, text_halign=text.align_left)
+table.cell(T, 1, 13, verdict,
+     bgcolor=C_HEADER, text_color=verdict_col, text_size=size.normal)
+table.cell(T, 2, 13, "≤ 2 signals = NO TRADE",
+     bgcolor=C_HEADER, text_color=C_DIM, text_size=size.tiny)
+
+// ─── ROW 14: IB Targets ──────────────────────────────────────
+ib_t1 = not na(ib_h) and not na(ib_range) ?
+         (ib_bull ? ib_h + ib_range * 0.5 : ib_l - ib_range * 0.5) : na
+ib_t2 = not na(ib_h) and not na(ib_range) ?
+         (ib_bull ? ib_h + ib_range * 1.0 : ib_l - ib_range * 1.0) : na
+ib_t3 = not na(ib_h) and not na(ib_range) ?
+         (ib_bull ? ib_h + ib_range * 2.0 : ib_l - ib_range * 2.0) : na
+
+ib_tgt_str = na(ib_t1) ? "IB NOT SET" :
+             "T1 " + str.tostring(math.round(ib_t1, 0)) +
+             "   T2 " + str.tostring(math.round(ib_t2, 0)) +
+             "   T3 " + str.tostring(math.round(ib_t3, 0))
+
+ib_rng_str = na(ib_range) ? "—" :
+             str.tostring(math.round(ib_range, 0)) + " pts  " +
+             (ib_bull ? "+50/+100/+200%" : "-50/-100/-200%")
+
+table.cell(T, 0, 14, "IB TARGETS",
+     text_color=C_DIM, text_size=size.tiny, text_halign=text.align_left)
+table.cell(T, 1, 14, ib_tgt_str,
+     text_color=sig_color(ib_sig), text_size=size.tiny)
+table.cell(T, 2, 14, ib_rng_str,
+     text_color=C_DIM, text_size=size.tiny)
