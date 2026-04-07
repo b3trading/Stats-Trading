@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NQ Full Morning Playbook</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── THEME (matches index.html exactly) ─────────────────── */
+  :root {
+    --bg:          #060a0f;
+    --surface:     #0d1520;
+    --surface2:    #111d2e;
+    --border:      #1e2e42;
+    --accent:      #00e5ff;
+    --accent2:     #ff4d4d;
+    --accent3:     #39ff14;
+    --text:        #c8d8e8;
+    --text-dim:    #5a7a96;
+    --text-bright: #e8f4ff;
+    --gold:        #ffd700;
+    --bull:        #39ff14;
+    --bear:        #ff4d4d;
+    --mono:        'IBM Plex Mono', monospace;
+    --sans:        'IBM Plex Sans', sans-serif;
+    --display:     'Bebas Neue', cursive;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* scanlines */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,229,255,0.015) 2px,rgba(0,229,255,0.015) 4px);
+    pointer-events: none; z-index: 9999;
+  }
+  /* grid */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(0,229,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.04) 1px,transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── HEADER ──────────────────────────────────────────────── */
+  header {
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+    background: rgba(6,10,15,0.97);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  .header-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 12px 20px 0;
+  }
+  .header-row1 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .logo {
+    font-family: var(--display);
+    font-size: 26px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,229,255,0.5);
+    flex-shrink: 0;
+    line-height: 1;
+    text-decoration: none;
+  }
+  .logo span {
+    color: var(--text-dim);
+    font-size: 11px;
+    font-family: var(--mono);
+    letter-spacing: 2px;
+    display: block;
+    margin-top: 2px;
+  }
+  /* row 2 — centered nav (desktop only) */
+  .header-row2 {
+    display: flex;
+    justify-content: center;
+    border-top: 1px solid var(--border);
+  }
+  nav { display: flex; flex-wrap: wrap; justify-content: center; }
+  nav a {
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 8px 12px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    font-family: var(--mono);
+  }
+  nav a:hover { color: var(--accent); background: var(--surface); }
+  nav a.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0,229,255,0.04); }
+
+  /* ── HAMBURGER + DROPDOWN ────────────────────────────────── */
+  .nav-wrap { position: relative; }
+  .nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 38px; height: 38px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    padding: 10px;
+    flex-shrink: 0;
+    transition: border-color 0.2s;
+  }
+  .nav-toggle:hover { border-color: var(--accent); }
+  .nav-toggle span {
+    display: block;
+    height: 1.5px;
+    background: var(--text);
+    transition: all 0.25s;
+    transform-origin: center;
+  }
+  .nav-toggle.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); background: var(--accent); }
+  .nav-toggle.open span:nth-child(2) { opacity: 0; }
+  .nav-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); background: var(--accent); }
+
+  .nav-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    /* KEY FIX: use fixed min-width, no overflow:hidden on parents */
+    min-width: 220px;
+    background: rgba(6,10,15,0.99);
+    border: 1px solid var(--border);
+    z-index: 9000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+  }
+  .nav-dropdown.open { display: block; animation: dropIn 0.15s ease; }
+  @keyframes dropIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+  .nav-dropdown a {
+    display: block;
+    padding: 13px 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-dropdown a:last-child { border-bottom: none; }
+  .nav-dropdown a:hover { background: var(--surface); color: var(--accent); }
+  .nav-dropdown a.active { color: var(--accent); }
+
+  @media (max-width: 860px) {
+    .header-row2 { display: none; }
+    .nav-toggle { display: flex; }
+  }
+
+  /* ── HERO / PAGE HEADER ──────────────────────────────────── */
+  .page-hero {
+    border-bottom: 1px solid var(--border);
+    padding: 40px 20px 32px;
+    position: relative;
+    z-index: 1;
+  }
+  .page-hero-inner { max-width: 900px; margin: 0 auto; }
+  .page-hero h1 {
+    font-family: var(--display);
+    font-size: clamp(48px, 10vw, 80px);
+    letter-spacing: 4px;
+    color: var(--text-bright);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .page-hero h1 em { color: var(--accent); font-style: normal; text-shadow: 0 0 30px rgba(0,229,255,0.4); }
+  .page-hero-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .progress-bar-wrap { background: var(--border); height: 3px; }
+  .progress-bar-fill { height: 100%; background: var(--accent); transition: width 0.4s ease; width: 0%; }
+  .progress-label { font-size: 10px; letter-spacing: 2px; color: var(--text-dim); margin-top: 6px; text-transform: uppercase; }
+
+  /* ── DATE BAR ────────────────────────────────────────────── */
+  .date-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 20px;
+    position: relative; z-index: 1;
+  }
+  .date-bar-inner {
+    max-width: 900px; margin: 0 auto;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .date-display { font-size: 11px; color: var(--text-dim); letter-spacing: 2px; }
+  .reset-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 5px 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .reset-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── MAIN LAYOUT ─────────────────────────────────────────── */
+  .main { max-width: 900px; margin: 0 auto; padding: 40px 20px 0; position: relative; z-index: 1; }
+
+  /* ── SECTION HEADERS ─────────────────────────────────────── */
+  .section-head { margin-bottom: 20px; }
+  .section-title {
+    font-family: var(--display);
+    font-size: clamp(28px, 5vw, 42px);
+    letter-spacing: 3px;
+    color: var(--text-bright);
+    line-height: 1;
+  }
+  .section-time {
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .section-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.75;
+    margin: 10px 0 24px;
+    padding-left: 14px;
+    border-left: 2px solid var(--border);
+    font-family: var(--sans);
+  }
+  .section-desc strong { color: var(--text); }
+
+  /* ── DIVIDER ─────────────────────────────────────────────── */
+  .divider {
+    height: 1px; background: var(--border); margin: 44px 0; position: relative;
+  }
+  .divider::after {
+    content: '◆';
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%,-50%);
+    background: var(--bg); padding: 0 12px;
+    color: var(--border); font-size: 10px;
+  }
+
+  /* ── STEP CARD ───────────────────────────────────────────── */
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+    transition: border-color 0.2s;
+  }
+  .step:hover { border-color: var(--text-dim); }
+  .step.answered { border-color: var(--text-dim); }
+
+  .step-inner { display: flex; align-items: stretch; }
+
+  .step-num {
+    flex: 0 0 50px;
+    background: var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 64px;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  .step.answered .step-num {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+  }
+
+  .step-content { flex: 1; padding: 14px 16px; }
+  .step-label {
+    font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 3px;
+  }
+  .step-body {
+    font-size: 14px; font-weight: 500; color: var(--text-bright); line-height: 1.3; margin-bottom: 5px;
+  }
+  .step-detail {
+    font-size: 12px; color: var(--text-dim); line-height: 1.7; font-family: var(--sans);
+  }
+
+  /* ── BRANCHES (info panels below step) ───────────────────── */
+  .branches {
+    margin: 0 0 0 50px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 6px; padding: 0 14px 14px 14px;
+    border-top: 1px solid var(--border);
+  }
+  .branch {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    font-size: 12px; line-height: 1.6;
+    background: var(--surface2);
+  }
+  .branch.bull { border-color: rgba(57,255,20,0.3); background: rgba(57,255,20,0.04); }
+  .branch.bear { border-color: rgba(255,77,77,0.3); background: rgba(255,77,77,0.04); }
+  .branch.neutral { border-color: rgba(255,215,0,0.3); background: rgba(255,215,0,0.04); }
+  .branch.info { border-color: rgba(0,229,255,0.3); background: rgba(0,229,255,0.04); }
+
+  .branch-icon { font-size: 14px; margin-bottom: 4px; display: block; }
+  .branch-cond {
+    font-weight: 600; margin-bottom: 4px; display: block;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .branch.bull .branch-cond { color: var(--accent3); }
+  .branch.bear .branch-cond { color: var(--accent2); }
+  .branch.neutral .branch-cond { color: var(--gold); }
+  .branch.info .branch-cond { color: var(--accent); }
+  .branch-body { color: var(--text-dim); font-family: var(--sans); font-size: 12px; }
+
+  .prob-tag {
+    display: inline-block; padding: 1px 7px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    margin-top: 5px; font-weight: 600;
+  }
+  .prob-tag.bull { background: rgba(57,255,20,0.15); color: var(--accent3); border: 1px solid rgba(57,255,20,0.3); }
+  .prob-tag.bear { background: rgba(255,77,77,0.15); color: var(--accent2); border: 1px solid rgba(255,77,77,0.3); }
+  .prob-tag.neutral { background: rgba(255,215,0,0.15); color: var(--gold); border: 1px solid rgba(255,215,0,0.3); }
+  .prob-tag.info { background: rgba(0,229,255,0.1); color: var(--accent); border: 1px solid rgba(0,229,255,0.3); }
+
+  /* ── INLINE SELECTION BUTTONS ────────────────────────────── */
+  .sel-row {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding: 0 14px 14px 64px;
+  }
+  .sel-btn {
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 1px;
+    cursor: pointer; color: var(--text-dim);
+    transition: all 0.15s;
+    text-transform: uppercase; white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sel-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .sel-btn:active { transform: scale(0.97); }
+  /* Selected states */
+  .sel-btn.picked-bull  { background: rgba(57,255,20,0.12); border-color: var(--accent3); color: var(--accent3); font-weight: 600; }
+  .sel-btn.picked-bear  { background: rgba(255,77,77,0.12); border-color: var(--accent2); color: var(--accent2); font-weight: 600; }
+  .sel-btn.picked-neutral { background: rgba(255,215,0,0.12); border-color: var(--gold); color: var(--gold); font-weight: 600; }
+  .sel-btn.picked-skip  { background: rgba(90,122,150,0.15); border-color: var(--text-dim); color: var(--text-dim); font-weight: 600; }
+
+  /* ── OUTCOME PANEL ───────────────────────────────────────── */
+  .outcome-panel {
+    display: none; margin: 0 14px 12px 64px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    animation: fadeUp 0.2s ease;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+  .outcome-panel.show { display: block; }
+  .outcome-inner { padding: 12px 16px; }
+  .outcome-tag {
+    font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
+    margin-bottom: 5px; font-weight: 600;
+  }
+  .outcome-tag.bull    { color: var(--accent3); }
+  .outcome-tag.bear    { color: var(--accent2); }
+  .outcome-tag.neutral { color: var(--gold); }
+  .outcome-tag.skip    { color: var(--text-dim); }
+  .outcome-text { font-size: 12px; color: var(--text-dim); line-height: 1.7; font-family: var(--sans); }
+  .outcome-text strong { color: var(--text); }
+
+  /* ── SETUP REFERENCE BOX ─────────────────────────────────── */
+  .setup-box {
+    border: 1px solid var(--border);
+    padding: 20px 24px; margin-bottom: 10px;
+    background: var(--surface); position: relative;
+  }
+  .setup-box.bull { border-color: rgba(57,255,20,0.4); }
+  .setup-box.bear { border-color: rgba(255,77,77,0.4); }
+  .setup-corner {
+    position: absolute; top: -1px; right: 14px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
+    padding: 3px 8px; text-transform: uppercase;
+  }
+  .setup-box.bull .setup-corner { background: rgba(57,255,20,0.15); color: var(--accent3); border: 1px solid rgba(57,255,20,0.3); border-top: none; }
+  .setup-box.bear .setup-corner { background: rgba(255,77,77,0.15); color: var(--accent2); border: 1px solid rgba(255,77,77,0.3); border-top: none; }
+  .setup-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+  .setup-box.bull .setup-title { color: var(--accent3); }
+  .setup-box.bear .setup-title { color: var(--accent2); }
+  .setup-rows { display: flex; flex-direction: column; gap: 6px; }
+  .setup-row { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; line-height: 1.5; }
+  .setup-key {
+    flex: 0 0 88px; font-family: var(--mono); font-size: 9px;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); padding-top: 2px;
+  }
+  .setup-val { color: var(--text); font-weight: 500; font-family: var(--sans); }
+  .setup-val em { font-style: normal; color: var(--text-dim); font-weight: 400; }
+
+  /* ── SIGNAL SUMMARY ──────────────────────────────────────── */
+  .signal-summary {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    margin-bottom: 28px;
+    overflow: visible; /* allow dropdown inside if needed */
+  }
+  .summary-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .summary-header-label {
+    font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-dim);
+  }
+  .summary-counts {
+    display: flex; align-items: center; gap: 20px;
+  }
+  .summary-bias {
+    font-family: var(--display); font-size: 28px; letter-spacing: 2px; line-height: 1;
+    transition: color 0.3s;
+  }
+  .summary-bias.bull    { color: var(--accent3); text-shadow: 0 0 20px rgba(57,255,20,0.3); }
+  .summary-bias.bear    { color: var(--accent2); text-shadow: 0 0 20px rgba(255,77,77,0.3); }
+  .summary-bias.neutral { color: var(--text-dim); }
+  .summary-count-grp { text-align: center; }
+  .summary-count-num { font-family: var(--display); font-size: 32px; letter-spacing: 1px; line-height: 1; }
+  .summary-count-num.bull { color: var(--accent3); }
+  .summary-count-num.bear { color: var(--accent2); }
+  .summary-count-lbl { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-top: 2px; }
+  .summary-edge {
+    font-family: var(--display); font-size: 20px; letter-spacing: 2px;
+    transition: color 0.3s;
+  }
+
+  /* Five signal rows */
+  .summary-signals {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-sig {
+    padding: 12px 14px;
+    border-right: 1px solid var(--border);
+    text-align: center;
+  }
+  .summary-sig:last-child { border-right: none; }
+  .summary-sig-label { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .summary-sig-val {
+    font-family: var(--display); font-size: 18px; letter-spacing: 1px;
+    color: var(--text-dim); transition: all 0.25s; line-height: 1;
+  }
+  .summary-sig-val.bull    { color: var(--accent3); }
+  .summary-sig-val.bear    { color: var(--accent2); }
+  .summary-sig-val.neutral { color: var(--gold); }
+
+  /* guidance strip */
+  .summary-guidance {
+    padding: 12px 20px; display: none;
+    font-size: 12px; color: var(--text-dim);
+    line-height: 1.7; font-family: var(--sans);
+    border-top: 1px solid var(--border);
+  }
+  .summary-guidance.show { display: block; }
+  .summary-guidance strong { color: var(--text); }
+
+  /* ── IRON RULES ──────────────────────────────────────────── */
+  .rules-box {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 28px; margin-top: 44px; position: relative;
+  }
+  .rules-box::before {
+    content: 'THE IRON RULES';
+    position: absolute; top: -12px; left: 18px;
+    background: var(--accent2); color: var(--bg);
+    font-family: var(--mono); font-size: 9px; letter-spacing: 3px; padding: 4px 10px;
+  }
+  .rules-box h3 { font-family: var(--display); font-size: 24px; letter-spacing: 2px; margin-bottom: 20px; color: var(--text-bright); }
+  .rule-item {
+    display: flex; gap: 16px; padding: 11px 0;
+    border-bottom: 1px solid var(--border); font-size: 13px; line-height: 1.6;
+  }
+  .rule-item:last-child { border-bottom: none; }
+  .rule-n { flex: 0 0 24px; color: var(--accent); font-size: 16px; font-weight: 700; line-height: 1.2; }
+  .rule-text { color: var(--text-dim); font-family: var(--sans); }
+  .rule-text strong { color: var(--text); }
+
+  /* ── FOOTER ──────────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 20px; text-align: center;
+    color: var(--text-dim); font-size: 11px; letter-spacing: 1px;
+    position: relative; z-index: 1;
+  }
+
+  /* ── RESPONSIVE ──────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .branches { grid-template-columns: 1fr; margin-left: 0; }
+    .sel-row { padding-left: 0; }
+    .outcome-panel { margin-left: 0; }
+    .summary-signals { grid-template-columns: 1fr 1fr 1fr; }
+    .summary-sig:nth-child(3) { border-right: none; }
+    .summary-sig:nth-child(4),
+    .summary-sig:nth-child(5) { border-top: 1px solid var(--border); }
+    .summary-sig:nth-child(5) { border-right: none; }
+    .summary-counts { gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER (matches index.html exactly) ══════════════════ -->
+<header>
+  <div class="header-inner">
+    <div class="header-row1">
+      <a href="index.html" class="logo">
+        NQ EDGE
+        <span>NASDAQ-100 E-MINI · STATISTICAL REFERENCE</span>
+      </a>
+      <div class="nav-wrap">
+        <button class="nav-toggle" id="navToggle" onclick="toggleNav(event)" aria-label="Navigation">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="nav-dropdown" id="navDrop">
+          <a href="index.html">Home</a>
+          <a href="index.html">ALN Sessions</a>
+          <a href="index.html">IB Breaks</a>
+          <a href="index.html">Noon Curve</a>
+          <a href="index.html">RTH Breaks</a>
+          <a href="index.html">Hour Stats</a>
+          <a href="index.html">1H Continuation</a>
+          <a href="index.html">First 10min Candle</a>
+          <a href="index.html">Algorithm</a>
+          <a href="nq-playbook.html" class="active">Full Morning Playbook</a>
+        </div>
+      </div>
+    </div>
+    <div class="header-row2">
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="index.html">ALN Sessions</a>
+        <a href="index.html">IB Breaks</a>
+        <a href="index.html">Noon Curve</a>
+        <a href="index.html">RTH Breaks</a>
+        <a href="index.html">Hour Stats</a>
+        <a href="index.html">1H Continuation</a>
+        <a href="index.html">First 10min Candle</a>
+        <a href="index.html">Algorithm</a>
+        <a href="nq-playbook.html" class="active">Full Morning Playbook</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<!-- ══ PAGE HERO ═════════════════════════════════════════════ -->
+<div class="page-hero">
+  <div class="page-hero-inner">
+    <div class="page-hero-sub">NQ Futures · Pre-IB + Post-IB · Based on 10yr data · Auto-resets daily</div>
+    <h1>MORNING <em>PLAYBOOK</em></h1>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+    <div class="progress-label" id="progressLabel">0 of 12 steps complete</div>
+  </div>
+</div>
+
+<!-- ══ DATE BAR ══════════════════════════════════════════════ -->
+<div class="date-bar">
+  <div class="date-bar-inner">
+    <div class="date-display" id="clockDisplay">—</div>
+    <button class="reset-btn" onclick="resetAll()">↺ Reset Today</button>
+  </div>
+</div>
+
+<!-- ══ MAIN ══════════════════════════════════════════════════ -->
+<div class="main">
+
+<!-- ─────────────────────────────────────────────────────────
+     PRE-MARKET CONTEXT
+───────────────────────────────────────────────────────────── -->
+<div class="section-head">
+  <div class="section-title">Pre-Market Context</div>
+  <div class="section-time">Before 9:00am ET</div>
+</div>
+<div class="section-desc">
+  Read the overnight before anything else. These two reads set the probabilistic frame for the entire day — before news, before charts, before anything.
+</div>
+
+<!-- STEP 01 -->
+<div class="step" id="s1">
+  <div class="step-inner">
+    <div class="step-num">01</div>
+    <div class="step-content">
+      <div class="step-label">ALN Sessions · Overnight Structure</div>
+      <div class="step-body">How did London trade relative to Asia?</div>
+      <div class="step-detail">Identify the Asia high and low. Where London closed relative to the Asian range is your overnight narrative — one of four structures.</div>
+    </div>
+  </div>
+  <div class="branches">
+    <div class="branch bull">
+      <span class="branch-icon">🟢</span>
+      <span class="branch-cond">London broke Asia High only</span>
+      <span class="branch-body">NY tends to continue higher ~72% of the time. Lean long into the open.</span>
+      <span class="prob-tag bull">72% Bull</span>
+    </div>
+    <div class="branch bear">
+      <span class="branch-icon">🔴</span>
+      <span class="branch-cond">London broke Asia Low only</span>
+      <span class="branch-body">NY tends to continue lower ~68% of the time. Lean short into the open.</span>
+      <span class="prob-tag bear">68% Bear</span>
+    </div>
+    <div class="branch neutral">
+      <span class="branch-icon">⚪</span>
+      <span class="branch-cond">London inside Asia</span>
+      <span class="branch-body">NY breaks the London H or L 95% of the time. Compressed overnight = explosive open likely. Wait for direction.</span>
+      <span class="prob-tag neutral">95% Break</span>
+    </div>
+    <div class="branch neutral">
+      <span class="branch-icon">🟡</span>
+      <span class="branch-cond">London engulfs Asia (both sides)</span>
+      <span class="branch-body">No strong edge — NY continuation only ~55%. Reduce size, wait for IB clarity.</span>
+      <span class="prob-tag neutral">55% Cont.</span>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s1" data-val="bull"    data-sig="sig1" onclick="pick(this)">🟢 London broke Asia High</button>
+    <button class="sel-btn" data-step="s1" data-val="bear"    data-sig="sig1" onclick="pick(this)">🔴 London broke Asia Low</button>
+    <button class="sel-btn" data-step="s1" data-val="neutral" data-sig="sig1" onclick="pick(this)">⚪ London inside Asia</button>
+    <button class="sel-btn" data-step="s1" data-val="neutral" data-sig="sig1" onclick="pick(this)">🟡 London engulfed Asia</button>
+  </div>
+  <div class="outcome-panel" id="out-s1"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s1"></div>
+    <div class="outcome-text" id="otext-s1"></div>
+  </div></div>
+</div>
+
+<!-- STEP 02 -->
+<div class="step" id="s2">
+  <div class="step-inner">
+    <div class="step-num">02</div>
+    <div class="step-content">
+      <div class="step-label">RTH Open Location · Prior Day Range</div>
+      <div class="step-body">Where does today open relative to yesterday's RTH high and low?</div>
+      <div class="step-detail">Mark yesterday's 9:30am–4:00pm high and low on your chart. Where today opens against those two lines is the most important structural fact of the morning.</div>
+    </div>
+  </div>
+  <div class="branches">
+    <div class="branch bull">
+      <span class="branch-icon">⬆</span>
+      <span class="branch-cond">Opens ABOVE pRTH high (gap up)</span>
+      <span class="branch-body">83.29% chance price does NOT break back through pRTH high. Gap tends to hold as support. Strong bull continuation bias.</span>
+      <span class="prob-tag bull">83% Bull</span>
+    </div>
+    <div class="branch bear">
+      <span class="branch-icon">⬇</span>
+      <span class="branch-cond">Opens BELOW pRTH low (gap down)</span>
+      <span class="branch-body">83.29% chance price does NOT break back through pRTH low. Gap tends to hold as resistance. Strong bear continuation bias.</span>
+      <span class="prob-tag bear">83% Bear</span>
+    </div>
+    <div class="branch info">
+      <span class="branch-icon">↕</span>
+      <span class="branch-cond">Opens INSIDE pRTH range</span>
+      <span class="branch-body">72.66% chance price breaks at least one side of pRTH before 4pm. No directional lean yet — wait for IB direction.</span>
+      <span class="prob-tag info">73% Break</span>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s2" data-val="bull"    data-sig="sig2" onclick="pick(this)">⬆ Above pRTH (gap up)</button>
+    <button class="sel-btn" data-step="s2" data-val="bear"    data-sig="sig2" onclick="pick(this)">⬇ Below pRTH (gap down)</button>
+    <button class="sel-btn" data-step="s2" data-val="neutral" data-sig="sig2" onclick="pick(this)">↕ Inside pRTH range</button>
+  </div>
+  <div class="outcome-panel" id="out-s2"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s2"></div>
+    <div class="outcome-text" id="otext-s2"></div>
+  </div></div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─────────────────────────────────────────────────────────
+     PRE-IB TRADE
+───────────────────────────────────────────────────────────── -->
+<div class="section-head">
+  <div class="section-title">Pre-IB Trade</div>
+  <div class="section-time">9:30am → 10:30am ET</div>
+</div>
+<div class="section-desc">
+  One setup window — the <strong>First 10-Minute Candle check at 9:40am</strong>. The three pre-IB signals that must all align are: <strong>(1) ALN bias · (2) pRTH open location · (3) first 10-min candle direction</strong>. Any one misalignment = skip to Post-IB. Half-size only — IB range is still forming.
+</div>
+
+<!-- STEP 03 -->
+<div class="step" id="s3">
+  <div class="step-inner">
+    <div class="step-num">03</div>
+    <div class="step-content">
+      <div class="step-label">9:30am · At the Bell</div>
+      <div class="step-body">Note the exact 9:30 open price. Do not trade. Set a 10-minute timer.</div>
+      <div class="step-detail">Write down or mark the 9:30 open on your chart. This price is your anchor for the first 10-minute candle check at 9:40am. Do not enter any position yet.</div>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s3" data-val="neutral" data-sig="" onclick="pick(this)">✓ 9:30 open noted — timer set</button>
+  </div>
+  <div class="outcome-panel" id="out-s3"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s3"></div>
+    <div class="outcome-text" id="otext-s3"></div>
+  </div></div>
+</div>
+
+<!-- STEP 04 -->
+<div class="step" id="s4">
+  <div class="step-inner">
+    <div class="step-num">04</div>
+    <div class="step-content">
+      <div class="step-label">9:40am · First 10-Min Candle Check</div>
+      <div class="step-body">At exactly 9:40am — where is price vs the 9:30 open?</div>
+      <div class="step-detail">Compare current price to your 9:30 anchor. Does the initial 10-minute move align with your ALN and pRTH bias from Steps 01–02?</div>
+    </div>
+  </div>
+  <div class="branches">
+    <div class="branch bull">
+      <span class="branch-icon">⬆</span>
+      <span class="branch-cond">9:40 above 9:30 open (up move)</span>
+      <span class="branch-body">Continuation more likely: 64% chance price stays above 9:30 at 10:00am. Does this match your ALN + pRTH bias? If YES → consider long. If NO → skip.</span>
+      <span class="prob-tag bull">64% Cont.</span>
+    </div>
+    <div class="branch bear">
+      <span class="branch-icon">⬇</span>
+      <span class="branch-cond">9:40 below 9:30 open (down move)</span>
+      <span class="branch-body">Continuation more likely: 62% chance price stays below 9:30 at 10:00am. Does this match your ALN + pRTH bias? If YES → consider short. If NO → skip.</span>
+      <span class="prob-tag bear">62% Cont.</span>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s4" data-val="bull"    data-sig="sig3" onclick="pick(this)">⬆ Above 9:30 — aligns with bull bias</button>
+    <button class="sel-btn" data-step="s4" data-val="bear"    data-sig="sig3" onclick="pick(this)">⬇ Below 9:30 — aligns with bear bias</button>
+    <button class="sel-btn" data-step="s4" data-val="neutral" data-sig="sig3" onclick="pick(this)">⚡ Conflicts with bias — signals mixed</button>
+  </div>
+  <div class="outcome-panel" id="out-s4"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s4"></div>
+    <div class="outcome-text" id="otext-s4"></div>
+  </div></div>
+</div>
+
+<!-- STEP 05 -->
+<div class="step" id="s5">
+  <div class="step-inner">
+    <div class="step-num">05</div>
+    <div class="step-content">
+      <div class="step-label">Pre-IB · Confluence Gate</div>
+      <div class="step-body">Do all 3 pre-IB signals align? ALN bias + pRTH open + First 10-min candle direction.</div>
+      <div class="step-detail">All three must point the same direction to take the pre-IB trade. One misalignment = no trade, move directly to Step 07 (Post-IB).</div>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s5" data-val="bull"    data-sig="" onclick="pick(this)">✅ All 3 bullish → Taking LONG (half size)</button>
+    <button class="sel-btn" data-step="s5" data-val="bear"    data-sig="" onclick="pick(this)">✅ All 3 bearish → Taking SHORT (half size)</button>
+    <button class="sel-btn" data-step="s5" data-val="skip"    data-sig="" onclick="pick(this)">❌ Signals mixed → Skipping to Post-IB</button>
+  </div>
+  <div class="outcome-panel" id="out-s5"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s5"></div>
+    <div class="outcome-text" id="otext-s5"></div>
+  </div></div>
+</div>
+
+<!-- Pre-IB Trade Plans -->
+<div class="setup-box bull">
+  <div class="setup-corner">Pre-IB Long</div>
+  <div class="setup-title">↑ PRE-IB LONG PLAN</div>
+  <div class="setup-rows">
+    <div class="setup-row"><div class="setup-key">Entry</div><div class="setup-val">First pullback to 9:30 open or prior level after 9:40 confirmation <em>(do not chase)</em></div></div>
+    <div class="setup-row"><div class="setup-key">Stop</div><div class="setup-val">Below 9:30 open — price crosses back below = first candle fake-out confirmed, exit flat immediately</div></div>
+    <div class="setup-row"><div class="setup-key">T1</div><div class="setup-val">Prior day RTH high <em>(if opened inside pRTH)</em> or nearest swing high</div></div>
+    <div class="setup-row"><div class="setup-key">T2</div><div class="setup-val">IB High once locked at 10:30 — trail stop to entry after T1</div></div>
+    <div class="setup-row"><div class="setup-key">Size</div><div class="setup-val">Half normal — IB not set, range is incomplete</div></div>
+  </div>
+</div>
+<div class="setup-box bear">
+  <div class="setup-corner">Pre-IB Short</div>
+  <div class="setup-title">↓ PRE-IB SHORT PLAN</div>
+  <div class="setup-rows">
+    <div class="setup-row"><div class="setup-key">Entry</div><div class="setup-val">First bounce to 9:30 open or resistance after 9:40 confirmation <em>(do not chase)</em></div></div>
+    <div class="setup-row"><div class="setup-key">Stop</div><div class="setup-val">Above 9:30 open — price crosses back above = first candle fake-out confirmed, exit flat immediately</div></div>
+    <div class="setup-row"><div class="setup-key">T1</div><div class="setup-val">Prior day RTH low <em>(if opened inside pRTH)</em> or nearest swing low</div></div>
+    <div class="setup-row"><div class="setup-key">T2</div><div class="setup-val">IB Low once locked at 10:30 — trail stop to entry after T1</div></div>
+    <div class="setup-row"><div class="setup-key">Size</div><div class="setup-val">Half normal — IB not set, range is incomplete</div></div>
+  </div>
+</div>
+
+<!-- STEP 06 -->
+<div class="step" id="s6">
+  <div class="step-inner">
+    <div class="step-num">06</div>
+    <div class="step-content">
+      <div class="step-label">10:00am · 9am Hour Close</div>
+      <div class="step-body">Did the 9am candle (9:00–10:00am) close green or red?</div>
+      <div class="step-detail">Strongest single directional signal of the morning. Green close → NY session closes green 70% of the time. Red close → 70% bear. This confirms or contradicts your pre-IB trade.</div>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s6" data-val="bull" data-sig="sig4" onclick="pick(this)">🟢 9am hour closed GREEN</button>
+    <button class="sel-btn" data-step="s6" data-val="bear" data-sig="sig4" onclick="pick(this)">🔴 9am hour closed RED</button>
+  </div>
+  <div class="outcome-panel" id="out-s6"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s6"></div>
+    <div class="outcome-text" id="otext-s6"></div>
+  </div></div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─────────────────────────────────────────────────────────
+     POST-IB TRADE
+───────────────────────────────────────────────────────────── -->
+<div class="section-head">
+  <div class="section-title">Post-IB Trade</div>
+  <div class="section-time">10:30am → Noon ET</div>
+</div>
+<div class="section-desc">
+  IB is now locked. 96% of sessions break the IB — your job is to determine which side, confirm with your full signal tally, and trade the break with pre-calculated extension targets.
+</div>
+
+<!-- STEP 07 -->
+<div class="step" id="s7">
+  <div class="step-inner">
+    <div class="step-num">07</div>
+    <div class="step-content">
+      <div class="step-label">10:30am · Lock the IB</div>
+      <div class="step-body">Record IB High, IB Low, IB Range, and IB Midpoint. Draw all four on your chart.</div>
+      <div class="step-detail">Range = IB High − IB Low. Mid = (IB High + IB Low) ÷ 2. Pre-calculate extension targets (+25%, +50%, +100% from the IB High or Low) before answering Step 08.</div>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s7" data-val="neutral" data-sig="" onclick="pick(this)">✓ IB locked — levels drawn — targets calculated</button>
+  </div>
+  <div class="outcome-panel" id="out-s7"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s7"></div>
+    <div class="outcome-text" id="otext-s7"></div>
+  </div></div>
+</div>
+
+<!-- STEP 08 -->
+<div class="step" id="s8">
+  <div class="step-inner">
+    <div class="step-num">08</div>
+    <div class="step-content">
+      <div class="step-label">IB Close Position · Directional Bias</div>
+      <div class="step-body">Where did price close when the IB window ended at 10:30am?</div>
+      <div class="step-detail">The closing position within the IB range is the most statistically reliable directional signal of the session — upper half or lower half drives the 81% / 74% break bias.</div>
+    </div>
+  </div>
+  <div class="branches">
+    <div class="branch bull">
+      <span class="branch-icon">⬆</span>
+      <span class="branch-cond">Closed UPPER half of IB range</span>
+      <span class="branch-body">81% probability the IB high breaks before 4pm. Strong bull bias — trade long on the break or on a pullback toward IB mid.</span>
+      <span class="prob-tag bull">81% High Breaks</span>
+    </div>
+    <div class="branch bear">
+      <span class="branch-icon">⬇</span>
+      <span class="branch-cond">Closed LOWER half of IB range</span>
+      <span class="branch-body">74% probability the IB low breaks before 4pm. Strong bear bias — trade short on the break or on a bounce toward IB mid.</span>
+      <span class="prob-tag bear">74% Low Breaks</span>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s8" data-val="bull" data-sig="sig5" onclick="pick(this)">⬆ Closed UPPER half → 81% high breaks</button>
+    <button class="sel-btn" data-step="s8" data-val="bear" data-sig="sig5" onclick="pick(this)">⬇ Closed LOWER half → 74% low breaks</button>
+  </div>
+  <div class="outcome-panel" id="out-s8"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s8"></div>
+    <div class="outcome-text" id="otext-s8"></div>
+  </div></div>
+</div>
+
+<!-- STEP 09 — Tally review -->
+<div class="step" id="s9">
+  <div class="step-inner">
+    <div class="step-num">09</div>
+    <div class="step-content">
+      <div class="step-label">Signal Tally · Session Conviction</div>
+      <div class="step-body">Review the live signal summary below. What does your signal count say?</div>
+      <div class="step-detail">Your 5 tally signals are: Step 01 (ALN), Step 02 (pRTH open), Step 04 (first 10min candle), Step 06 (9am hour close), Step 08 (IB close position). The summary updates automatically as you work through the checklist.</div>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s9" data-val="bull"    data-sig="" onclick="pick(this)">✅ 4–5 Bull → Full size LONG</button>
+    <button class="sel-btn" data-step="s9" data-val="bear"    data-sig="" onclick="pick(this)">✅ 4–5 Bear → Full size SHORT</button>
+    <button class="sel-btn" data-step="s9" data-val="neutral" data-sig="" onclick="pick(this)">⚠ 3 aligned → Half size in bias direction</button>
+    <button class="sel-btn" data-step="s9" data-val="skip"    data-sig="" onclick="pick(this)">❌ 2 or fewer → No trade today</button>
+  </div>
+  <div class="outcome-panel" id="out-s9"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s9"></div>
+    <div class="outcome-text" id="otext-s9"></div>
+  </div></div>
+</div>
+
+<!-- ── SIGNAL SUMMARY ──────────────────────────────────────── -->
+<div class="signal-summary">
+  <div class="summary-header">
+    <div class="summary-header-label">Live Signal Summary — Updates as you complete steps</div>
+    <div class="summary-counts">
+      <div class="summary-bias neutral" id="biasWord">—</div>
+      <div class="summary-count-grp">
+        <div class="summary-count-num bull" id="bullCount">–</div>
+        <div class="summary-count-lbl">Bull</div>
+      </div>
+      <div class="summary-count-grp">
+        <div class="summary-count-num bear" id="bearCount">–</div>
+        <div class="summary-count-lbl">Bear</div>
+      </div>
+      <div class="summary-edge" id="edgeRating">–</div>
+    </div>
+  </div>
+  <div class="summary-signals">
+    <div class="summary-sig">
+      <div class="summary-sig-label">① ALN Session</div>
+      <div class="summary-sig-val neutral" id="ssig1">—</div>
+    </div>
+    <div class="summary-sig">
+      <div class="summary-sig-label">② pRTH Open</div>
+      <div class="summary-sig-val neutral" id="ssig2">—</div>
+    </div>
+    <div class="summary-sig">
+      <div class="summary-sig-label">③ 10min Candle</div>
+      <div class="summary-sig-val neutral" id="ssig3">—</div>
+    </div>
+    <div class="summary-sig">
+      <div class="summary-sig-label">④ 9am Hour</div>
+      <div class="summary-sig-val neutral" id="ssig4">—</div>
+    </div>
+    <div class="summary-sig">
+      <div class="summary-sig-label">⑤ IB Close</div>
+      <div class="summary-sig-val neutral" id="ssig5">—</div>
+    </div>
+  </div>
+  <div class="summary-guidance" id="summaryGuidance"></div>
+</div>
+
+<!-- STEP 10 -->
+<div class="step" id="s10">
+  <div class="step-inner">
+    <div class="step-num">10</div>
+    <div class="step-content">
+      <div class="step-label">IB Break Entry · The Trigger</div>
+      <div class="step-body">Did price break the IB high or low? Which side, and was it in your bias direction?</div>
+      <div class="step-detail">Wait for a 1-min or 5-min candle to CLOSE outside the IB — a close is more reliable than a wick. The break should match your bias from Steps 08 and 09.</div>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s10" data-val="bull"    data-sig="" onclick="pick(this)">⬆ IB HIGH broke → Long active</button>
+    <button class="sel-btn" data-step="s10" data-val="bear"    data-sig="" onclick="pick(this)">⬇ IB LOW broke → Short active</button>
+    <button class="sel-btn" data-step="s10" data-val="neutral" data-sig="" onclick="pick(this)">⏳ No break yet — watching</button>
+    <button class="sel-btn" data-step="s10" data-val="skip"    data-sig="" onclick="pick(this)">⚡ Break against bias — skipping</button>
+  </div>
+  <div class="outcome-panel" id="out-s10"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s10"></div>
+    <div class="outcome-text" id="otext-s10"></div>
+  </div></div>
+</div>
+
+<!-- STEP 11 -->
+<div class="step" id="s11">
+  <div class="step-inner">
+    <div class="step-num">11</div>
+    <div class="step-content">
+      <div class="step-label">Post-IB Targets · Extension Levels</div>
+      <div class="step-body">Set your targets using IB extension math before you enter. Know your exits before your entry.</div>
+      <div class="step-detail">Scale out — never hold for a single target. The +25% extension is your bread-and-butter T1. Anything beyond +50% is a bonus runner.</div>
+    </div>
+  </div>
+  <div class="branches">
+    <div class="branch bull">
+      <span class="branch-icon">📐</span>
+      <span class="branch-cond">Long Extension Targets (from IB High)</span>
+      <span class="branch-body">T1: IB High + (Range × 0.25) · T2: IB High + (Range × 0.50) · T3: IB High + (Range × 1.00). Scale 50% at T1, 30% at T2, trail 10% at T3.</span>
+      <span class="prob-tag bull">Scale Out</span>
+    </div>
+    <div class="branch bear">
+      <span class="branch-icon">📐</span>
+      <span class="branch-cond">Short Extension Targets (from IB Low)</span>
+      <span class="branch-body">T1: IB Low − (Range × 0.25) · T2: IB Low − (Range × 0.50) · T3: IB Low − (Range × 1.00). Scale 50% at T1, 30% at T2, trail 10% at T3.</span>
+      <span class="prob-tag bear">Scale Out</span>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s11" data-val="neutral" data-sig="" onclick="pick(this)">✓ Targets set — T1, T2, T3 calculated</button>
+  </div>
+  <div class="outcome-panel" id="out-s11"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s11"></div>
+    <div class="outcome-text" id="otext-s11"></div>
+  </div></div>
+</div>
+
+<!-- Post-IB Trade Plans -->
+<div class="setup-box bull">
+  <div class="setup-corner">Post-IB Long</div>
+  <div class="setup-title">↑ POST-IB LONG PLAN</div>
+  <div class="setup-rows">
+    <div class="setup-row"><div class="setup-key">Trigger</div><div class="setup-val">1-min or 5-min candle closes ABOVE IB High</div></div>
+    <div class="setup-row"><div class="setup-key">Entry A</div><div class="setup-val">Break entry — buy close of breakout candle <em>(faster, higher risk)</em></div></div>
+    <div class="setup-row"><div class="setup-key">Entry B</div><div class="setup-val">Retest entry — pullback to IB High, buy first bounce <em>(lower risk, may miss)</em></div></div>
+    <div class="setup-row"><div class="setup-key">Stop</div><div class="setup-val">Below IB High — if price returns inside IB → flat immediately</div></div>
+    <div class="setup-row"><div class="setup-key">T1 · 50%</div><div class="setup-val">IB High + (Range × 0.25) — scale here, move stop to entry</div></div>
+    <div class="setup-row"><div class="setup-key">T2 · 30%</div><div class="setup-val">IB High + (Range × 0.50) — hold remainder, trail stop</div></div>
+    <div class="setup-row"><div class="setup-key">T3 · 10%</div><div class="setup-val">IB High + (Range × 1.00) — let runner run</div></div>
+  </div>
+</div>
+<div class="setup-box bear">
+  <div class="setup-corner">Post-IB Short</div>
+  <div class="setup-title">↓ POST-IB SHORT PLAN</div>
+  <div class="setup-rows">
+    <div class="setup-row"><div class="setup-key">Trigger</div><div class="setup-val">1-min or 5-min candle closes BELOW IB Low</div></div>
+    <div class="setup-row"><div class="setup-key">Entry A</div><div class="setup-val">Break entry — sell close of breakdown candle <em>(faster, higher risk)</em></div></div>
+    <div class="setup-row"><div class="setup-key">Entry B</div><div class="setup-val">Retest entry — bounce to IB Low, sell first rejection <em>(lower risk, may miss)</em></div></div>
+    <div class="setup-row"><div class="setup-key">Stop</div><div class="setup-val">Above IB Low — if price returns inside IB → flat immediately</div></div>
+    <div class="setup-row"><div class="setup-key">T1 · 50%</div><div class="setup-val">IB Low − (Range × 0.25) — scale here, move stop to entry</div></div>
+    <div class="setup-row"><div class="setup-key">T2 · 30%</div><div class="setup-val">IB Low − (Range × 0.50) — hold remainder, trail stop</div></div>
+    <div class="setup-row"><div class="setup-key">T3 · 10%</div><div class="setup-val">IB Low − (Range × 1.00) — let runner run</div></div>
+  </div>
+</div>
+
+<!-- STEP 12 -->
+<div class="step" id="s12">
+  <div class="step-inner">
+    <div class="step-num">12</div>
+    <div class="step-content">
+      <div class="step-label">Noon Curve · 12pm–2pm Awareness</div>
+      <div class="step-body">If still in a trade past noon — watch for the midday reversal zone.</div>
+      <div class="step-detail">Daily highs and lows commonly form in the Q2/Q3 window (10am–2pm). If price stalls or wicks sharply near noon at a target zone — consider protecting profits. The Q4 (2pm–4pm) often reverses the Q3 extreme.</div>
+    </div>
+  </div>
+  <div class="sel-row">
+    <button class="sel-btn" data-step="s12" data-val="bull"    data-sig="" onclick="pick(this)">📈 Holding runner — stop moved to entry</button>
+    <button class="sel-btn" data-step="s12" data-val="neutral" data-sig="" onclick="pick(this)">🔒 Scaled out at T1/T2 — flat or partial</button>
+    <button class="sel-btn" data-step="s12" data-val="skip"    data-sig="" onclick="pick(this)">✅ Flat — session complete</button>
+  </div>
+  <div class="outcome-panel" id="out-s12"><div class="outcome-inner">
+    <div class="outcome-tag" id="otag-s12"></div>
+    <div class="outcome-text" id="otext-s12"></div>
+  </div></div>
+</div>
+
+<!-- ── IRON RULES ─────────────────────────────────────────── -->
+<div class="rules-box">
+  <h3>THE NON-NEGOTIABLES</h3>
+  <div class="rule-item"><div class="rule-n">1</div><div class="rule-text"><strong>Pre-IB trade requires all 3 signals aligned.</strong> ALN bias + pRTH open + first 10-min candle direction. Two out of three is not a trade. One misalignment — skip to Post-IB.</div></div>
+  <div class="rule-item"><div class="rule-n">2</div><div class="rule-text"><strong>Pre-IB size is always half.</strong> IB is not set. You are trading into an incomplete range. Half size, every time, no exceptions.</div></div>
+  <div class="rule-item"><div class="rule-n">3</div><div class="rule-text"><strong>If price crosses back through the 9:30 open — exit immediately.</strong> The first candle fake-out has activated. Do not average. Do not wait. Out.</div></div>
+  <div class="rule-item"><div class="rule-n">4</div><div class="rule-text"><strong>96% break rate does not mean the break goes your direction.</strong> The IB close position (Step 08) tells you which side. Wait for it before entering any post-IB trade.</div></div>
+  <div class="rule-item"><div class="rule-n">5</div><div class="rule-text"><strong>If price returns inside the IB after breaking — flat everything.</strong> A failed IB break signals a potential double-break day (23% of sessions). The edge is gone.</div></div>
+  <div class="rule-item"><div class="rule-n">6</div><div class="rule-text"><strong>2 or fewer aligned signals = no trade.</strong> Skipping is a position. There will be a better setup tomorrow. Preserving capital is the trade.</div></div>
+  <div class="rule-item"><div class="rule-n">7</div><div class="rule-text"><strong>Know T1, T2, T3 before you enter.</strong> If extension targets are not calculated before you touch the order entry, you are not ready to trade.</div></div>
+</div>
+
+</div><!-- /main -->
+
+<footer>
+  NQ Edge · Full Morning Playbook · Statistical reference based on 10-year NQ Futures data (2014–2025)<br>
+  <span style="color:var(--accent2)">Not financial advice. Past statistical tendencies do not guarantee future results.</span>
+</footer>
+
+<script>
+// ── OUTCOME TEXT ────────────────────────────────────────────
+const OC = {
+  // Step 1 ALN
+  's1-bull':    { type:'bull',    tag:'🟢 BULLISH OVERNIGHT',          text:'<strong>London broke Asia High only.</strong> NY tends to continue higher ~72% of the time. Lean long bias into the open. Confirm with Step 02.' },
+  's1-bear':    { type:'bear',    tag:'🔴 BEARISH OVERNIGHT',          text:'<strong>London broke Asia Low only.</strong> NY tends to continue lower ~68% of the time. Lean short bias into the open. Confirm with Step 02.' },
+  's1-neutral': { type:'neutral', tag:'⚪ COMPRESSED / CHOPPY',        text:'<strong>London inside Asia or engulfed Asia.</strong> No clear directional lean. Explosive open possible — wait for the 9:30 open to resolve direction before committing.' },
+  // Step 2 pRTH
+  's2-bull':    { type:'bull',    tag:'⬆ GAP UP — BULL CONTINUATION',  text:'<strong>83.29% probability price does NOT break back through pRTH high.</strong> Strong bull continuation. The gap tends to hold as support.' },
+  's2-bear':    { type:'bear',    tag:'⬇ GAP DOWN — BEAR CONTINUATION',text:'<strong>83.29% probability price does NOT break back through pRTH low.</strong> Strong bear continuation. The gap tends to hold as resistance.' },
+  's2-neutral': { type:'neutral', tag:'↕ INSIDE — NO DIRECTIONAL LEAN',text:'<strong>72.66% probability price breaks at least one side of pRTH before 4pm.</strong> No directional lean yet — wait for IB close position in Step 08.' },
+  // Step 3 open noted
+  's3-neutral': { type:'neutral', tag:'✓ 9:30 ANCHOR SET',             text:'Good. <strong>Do not trade.</strong> Let the first 10-minute candle develop. Return at exactly 9:40am for the candle check.' },
+  // Step 4 candle
+  's4-bull':    { type:'bull',    tag:'⬆ UP MOVE — 64% CONTINUATION',  text:'<strong>64% chance price is still above 9:30 open at 10:00am.</strong> Aligns with bull bias. Proceed to Step 05 — check all 3 signals before entering.' },
+  's4-bear':    { type:'bear',    tag:'⬇ DOWN MOVE — 62% CONTINUATION',text:'<strong>62% chance price stays below 9:30 open at 10:00am.</strong> Aligns with bear bias. Proceed to Step 05 — check all 3 signals before entering.' },
+  's4-neutral': { type:'neutral', tag:'⚡ CONFLICT — SIGNALS MIXED',    text:'<strong>The 10-minute candle conflicts with your overnight bias.</strong> Do not force a pre-IB trade. Skip to Step 07 (Post-IB).' },
+  // Step 5 confluence
+  's5-bull':    { type:'bull',    tag:'✅ PRE-IB LONG — HALF SIZE',     text:'<strong>All 3 pre-IB signals bullish. Taking long at half size.</strong> Entry on pullback to 9:30 open. Stop below 9:30 — if price crosses back below, exit flat immediately. No averaging.' },
+  's5-bear':    { type:'bear',    tag:'✅ PRE-IB SHORT — HALF SIZE',    text:'<strong>All 3 pre-IB signals bearish. Taking short at half size.</strong> Entry on bounce to 9:30 open. Stop above 9:30 — if price crosses back above, exit flat immediately. No averaging.' },
+  's5-skip':    { type:'skip',    tag:'❌ PRE-IB SKIPPED',              text:'<strong>Signals mixed — no pre-IB trade. Good discipline.</strong> The IB setup at 10:30am has cleaner statistics. Continue through Step 06 and wait for Post-IB.' },
+  // Step 6 9am hour
+  's6-bull':    { type:'bull',    tag:'🟢 9AM HOUR GREEN — 70% BULL',   text:'<strong>NY session closes green 70% of the time when the 9am hour closes green.</strong> If in a pre-IB long — hold. If flat — prepare for the IB long setup at 10:30.' },
+  's6-bear':    { type:'bear',    tag:'🔴 9AM HOUR RED — 70% BEAR',    text:'<strong>NY session closes red 70% of the time when the 9am hour closes red.</strong> If in a pre-IB short — hold. If flat — prepare for the IB short setup at 10:30.' },
+  // Step 7 IB locked
+  's7-neutral': { type:'neutral', tag:'✓ IB LOCKED',                   text:'<strong>Initial Balance is set and locked.</strong> All levels drawn. Extension targets pre-calculated. Proceed to Step 08 — read the IB close position for directional bias.' },
+  // Step 8 IB close
+  's8-bull':    { type:'bull',    tag:'⬆ UPPER HALF — 81% HIGH BREAKS',text:'<strong>81% probability the IB high breaks before 4pm.</strong> Strong bull bias. Enter long on the IB high break or on a pullback toward IB mid. Target the +25%, +50%, +100% extensions above IB high.' },
+  's8-bear':    { type:'bear',    tag:'⬇ LOWER HALF — 74% LOW BREAKS', text:'<strong>74% probability the IB low breaks before 4pm.</strong> Strong bear bias. Enter short on the IB low break or on a bounce toward IB mid. Target the −25%, −50%, −100% extensions below IB low.' },
+  // Step 9 conviction
+  's9-bull':    { type:'bull',    tag:'✅ HIGH CONVICTION BULL',         text:'<strong>4–5 bullish signals. Full size long on IB high break.</strong> 82% probability the IB low will NOT also be broken — trend your position to targets.' },
+  's9-bear':    { type:'bear',    tag:'✅ HIGH CONVICTION BEAR',         text:'<strong>4–5 bearish signals. Full size short on IB low break.</strong> 82% probability the IB high will NOT also be broken — trend your position to targets.' },
+  's9-neutral': { type:'neutral', tag:'⚠ MODERATE EDGE — HALF SIZE',   text:'<strong>3 signals aligned. Trade in the direction of the majority at half size.</strong> Tighten stop and scale out at T1 earlier than normal.' },
+  's9-skip':    { type:'skip',    tag:'❌ INSUFFICIENT EDGE — NO TRADE',text:'<strong>2 or fewer signals aligned. No trade today.</strong> Preserving capital is the trade. There will be a cleaner setup.' },
+  // Step 10 break
+  's10-bull':   { type:'bull',    tag:'⬆ IB HIGH BROKEN — LONG ACTIVE',text:'<strong>IB high confirmed broken. Long position active.</strong> 82% probability the IB low is NOT also broken. Scale: 50% at T1, 30% at T2, trail 10% at T3. Move stop to entry at T1.' },
+  's10-bear':   { type:'bear',    tag:'⬇ IB LOW BROKEN — SHORT ACTIVE',text:'<strong>IB low confirmed broken. Short position active.</strong> 82% probability the IB high is NOT also broken. Scale: 50% at T1, 30% at T2, trail 10% at T3. Move stop to entry at T1.' },
+  's10-neutral':{ type:'neutral', tag:'⏳ WATCHING FOR IB BREAK',       text:'<strong>No confirmed break yet.</strong> 96% of sessions break before 4pm. Wait for a candle CLOSE outside the IB — not just a wick.' },
+  's10-skip':   { type:'skip',    tag:'⚡ COUNTER-BIAS BREAK — SKIPPING',text:'<strong>The break was against your signal bias.</strong> Do not chase. Flat and observe. If the counter-break holds 2–3 candles, reassess.' },
+  // Step 11 targets
+  's11-neutral':{ type:'neutral', tag:'✓ TARGETS SET',                  text:'<strong>Extension targets locked in before entry.</strong> You are ready to execute. Stick to the plan — do not move targets mid-trade.' },
+  // Step 12 noon
+  's12-bull':   { type:'bull',    tag:'📈 RUNNER ACTIVE',               text:'<strong>Stop moved to entry — runner in play.</strong> Watch for a stall near noon (Q3 window). If price wicks sharply at T2+ — consider protecting the gain.' },
+  's12-neutral':{ type:'neutral', tag:'🔒 SCALED OUT / PARTIAL',        text:'<strong>Profits locked at T1/T2. Partial or flat.</strong> Good trade management. If flat at 2pm, reassess for the power hour entry in the direction of your session bias.' },
+  's12-skip':   { type:'skip',    tag:'✅ SESSION COMPLETE',             text:'<strong>Session complete — flat.</strong> Review your signals vs the outcome. Reset tomorrow.' },
+};
+
+// ── TALLY SIGNAL MAP ────────────────────────────────────────
+// Which steps feed into which summary signal slot
+const SIG_STEPS = {
+  sig1: 's1',   // ALN
+  sig2: 's2',   // pRTH
+  sig3: 's4',   // 10min candle
+  sig4: 's6',   // 9am hour
+  sig5: 's8',   // IB close
+};
+
+// ── STATE ───────────────────────────────────────────────────
+const ALL_STEPS = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12'];
+// stepVal: { stepId: { val, key } }
+let stepVal = {};
+// sigVal: { sigId: 'bull'|'bear'|'neutral'|'' }
+let sigVal  = { sig1:'', sig2:'', sig3:'', sig4:'', sig5:'' };
+
+// ── PICK ────────────────────────────────────────────────────
+function pick(btn) {
+  const step = btn.dataset.step;
+  const val  = btn.dataset.val;
+  const sig  = btn.dataset.sig;
+  const key  = step + '-' + val;
+
+  // Clear + re-highlight buttons for this step
+  document.querySelectorAll(`.sel-btn[data-step="${step}"]`).forEach(b => {
+    b.classList.remove('picked-bull','picked-bear','picked-neutral','picked-skip');
+  });
+  btn.classList.add('picked-' + val);
+
+  // Store
+  stepVal[step] = { val, key };
+  if (sig) sigVal[sig] = val;
+
+  // Mark step answered
+  const stepEl = document.getElementById(step);
+  if (stepEl) stepEl.classList.add('answered');
+
+  // Show outcome
+  const data = OC[key];
+  if (data) {
+    const panel = document.getElementById('out-' + step);
+    const tag   = document.getElementById('otag-' + step);
+    const text  = document.getElementById('otext-' + step);
+    if (panel && tag && text) {
+      tag.className = 'outcome-tag ' + data.type;
+      tag.textContent = data.tag;
+      text.innerHTML  = data.text;
+      panel.classList.add('show');
+    }
+  }
+
+  updateSummary();
+  updateProgress();
+  saveState();
+}
+
+// ── SUMMARY ─────────────────────────────────────────────────
+function updateSummary() {
+  let bulls = 0, bears = 0;
+  const sigIcons = {
+    sig1: { bull:'⬆ BULL', bear:'⬇ BEAR', neutral:'— MIXED', '':'—' },
+    sig2: { bull:'⬆ BULL', bear:'⬇ BEAR', neutral:'↕ INSIDE', '':'—' },
+    sig3: { bull:'⬆ UP',   bear:'⬇ DOWN', neutral:'⚡ MIX',  '':'—' },
+    sig4: { bull:'🟢 GRN', bear:'🔴 RED',  '':'—' },
+    sig5: { bull:'⬆ UPR',  bear:'⬇ LWR',  '':'—' },
+  };
+
+  ['sig1','sig2','sig3','sig4','sig5'].forEach((sid, i) => {
+    const v  = sigVal[sid] || '';
+    const el = document.getElementById('ssig' + (i+1));
+    if (!el) return;
+    const icon = (sigIcons[sid][v] || sigIcons[sid][''] || '—');
+    el.textContent = icon;
+    el.className = 'summary-sig-val ' + (v === 'bull' ? 'bull' : v === 'bear' ? 'bear' : v === 'neutral' ? 'neutral' : 'neutral');
+    if (v === 'bull') bulls++;
+    else if (v === 'bear') bears++;
+  });
+
+  const total = bulls + bears;
+  document.getElementById('bullCount').textContent = total > 0 ? bulls : '–';
+  document.getElementById('bearCount').textContent = total > 0 ? bears : '–';
+
+  let edge = '–', biasWord = '—', biasClass = 'neutral', guidance = '';
+
+  if (total >= 2) {
+    const diff = Math.abs(bulls - bears);
+    edge = diff >= 4 ? 'STRONG' : diff === 3 ? 'GOOD' : diff === 2 ? 'MODERATE' : diff === 1 ? 'WEAK' : 'NONE';
+    if (bulls > bears)      { biasWord = 'BULLISH'; biasClass = 'bull'; }
+    else if (bears > bulls) { biasWord = 'BEARISH'; biasClass = 'bear'; }
+    else                    { biasWord = 'MIXED';   biasClass = 'neutral'; }
+
+    const dir = biasWord;
+    if (edge === 'STRONG' || edge === 'GOOD') {
+      guidance = `<strong>${bulls > bears ? bulls : bears} of 5 signals ${dir.toLowerCase()}.</strong> High-conviction ${dir.toLowerCase()} day. Take the IB break in the ${dir.toLowerCase()} direction at full size. After the break, 82% probability the other side does NOT break.`;
+    } else if (edge === 'MODERATE') {
+      guidance = `<strong>${bulls > bears ? bulls : bears} of 5 signals lean ${dir.toLowerCase()}.</strong> Moderate edge — trade ${dir.toLowerCase()} at half size. Tighten stops and scale out at T1 earlier than normal.`;
+    } else if (edge === 'WEAK') {
+      guidance = `<strong>Signals nearly split (${bulls} bull / ${bears} bear).</strong> Minimal edge — quarter size maximum, or skip. Let the IB break confirm direction before committing any size.`;
+    } else {
+      guidance = `<strong>Signals evenly split — no statistical edge today.</strong> Consider sitting out. If you trade, use minimal size and strict stops.`;
+    }
+  }
+
+  const edgeEl = document.getElementById('edgeRating');
+  edgeEl.textContent = edge;
+  edgeEl.style.color = edge === 'STRONG' ? 'var(--accent3)' : edge === 'GOOD' ? '#7aff5a' :
+    edge === 'MODERATE' ? 'var(--gold)' : edge === 'WEAK' || edge === 'NONE' ? 'var(--accent2)' : 'var(--text-dim)';
+
+  const bw = document.getElementById('biasWord');
+  bw.textContent = biasWord;
+  bw.className = 'summary-bias ' + biasClass;
+
+  const gEl = document.getElementById('summaryGuidance');
+  if (gEl) {
+    gEl.innerHTML = guidance;
+    gEl.className = 'summary-guidance' + (guidance ? ' show' : '');
+  }
+}
+
+// ── PROGRESS ─────────────────────────────────────────────────
+function updateProgress() {
+  const done = ALL_STEPS.filter(id => stepVal[id]).length;
+  const pct  = Math.round((done / ALL_STEPS.length) * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${done} of ${ALL_STEPS.length} steps complete`;
+}
+
+// ── DATE KEY (ET) ────────────────────────────────────────────
+function todayKey() {
+  const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  return `nq-pb-${et.getFullYear()}-${et.getMonth()}-${et.getDate()}`;
+}
+
+// ── SAVE / LOAD ───────────────────────────────────────────────
+function saveState() {
+  try { localStorage.setItem(todayKey(), JSON.stringify({ stepVal, sigVal })); } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(todayKey());
+    if (!raw) return; // new day = fresh start
+    const saved = JSON.parse(raw);
+    stepVal = saved.stepVal || {};
+    sigVal  = saved.sigVal  || { sig1:'', sig2:'', sig3:'', sig4:'', sig5:'' };
+
+    ALL_STEPS.forEach(sid => {
+      const s = stepVal[sid];
+      if (!s) return;
+      const stepEl = document.getElementById(sid);
+      if (stepEl) stepEl.classList.add('answered');
+      // Re-highlight button
+      const btn = document.querySelector(`.sel-btn[data-step="${sid}"][data-val="${s.val}"]`);
+      if (btn) {
+        // Check if this specific key matches (for steps with multiple same-val buttons like s1)
+        // Use key matching for s1 where both neutral buttons exist
+        const matched = document.querySelector(`.sel-btn[data-step="${sid}"][data-val="${s.val}"]`);
+        if (matched) matched.classList.add('picked-' + s.val);
+      }
+      // Show outcome
+      const data = OC[s.key];
+      if (data) {
+        const panel = document.getElementById('out-' + sid);
+        const tag   = document.getElementById('otag-' + sid);
+        const text  = document.getElementById('otext-' + sid);
+        if (panel && tag && text) {
+          tag.className = 'outcome-tag ' + data.type;
+          tag.textContent = data.tag;
+          text.innerHTML  = data.text;
+          panel.classList.add('show');
+        }
+      }
+    });
+    updateSummary();
+    updateProgress();
+  } catch(e) { stepVal = {}; sigVal = { sig1:'', sig2:'', sig3:'', sig4:'', sig5:'' }; }
+}
+
+function resetAll() {
+  stepVal = {};
+  sigVal  = { sig1:'', sig2:'', sig3:'', sig4:'', sig5:'' };
+  try { localStorage.removeItem(todayKey()); } catch(e) {}
+  ALL_STEPS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('answered');
+    document.querySelectorAll(`.sel-btn[data-step="${id}"]`).forEach(b =>
+      b.classList.remove('picked-bull','picked-bear','picked-neutral','picked-skip')
+    );
+    const p = document.getElementById('out-' + id);
+    if (p) p.classList.remove('show');
+  });
+  updateSummary();
+  updateProgress();
+}
+
+// ── CLOCK ────────────────────────────────────────────────────
+function updateClock() {
+  const et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const D  = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const M  = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const p  = n => n.toString().padStart(2,'0');
+  document.getElementById('clockDisplay').textContent =
+    `${D[et.getDay()]} ${M[et.getMonth()]} ${et.getDate()} ${et.getFullYear()} · ${p(et.getHours())}:${p(et.getMinutes())}:${p(et.getSeconds())} ET`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── NAV ──────────────────────────────────────────────────────
+function toggleNav(e) {
+  e.stopPropagation();
+  const drop = document.getElementById('navDrop');
+  const btn  = document.getElementById('navToggle');
+  const open = drop.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+document.addEventListener('click', () => {
+  document.getElementById('navDrop')?.classList.remove('open');
+  document.getElementById('navToggle')?.classList.remove('open');
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('navDrop')?.classList.remove('open');
+    document.getElementById('navToggle')?.classList.remove('open');
+  }
+});
+
+// ── INIT ─────────────────────────────────────────────────────
+loadState();
+</script>
+</body>
+</html>

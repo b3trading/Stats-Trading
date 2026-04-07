@@ -1,0 +1,375 @@
+//@version=6
+indicator("NQ Edge — Statistical Dashboard", overlay=true, max_lines_count=50, max_labels_count=50)
+
+// ═══════════════════════════════════════════════════════════════
+// NQ EDGE — 5-Signal Probability Dashboard
+// Based on nqstats.com · 10-Year NQ Futures Data (2014–2025)
+// Signals: ALN | pRTH Open | 9:40 Candle | 10am Open | IB Close
+// Edge Rating: STRONG · GOOD · MODERATE · WEAK · NONE
+// ═══════════════════════════════════════════════════════════════
+
+// ─── INPUTS ──────────────────────────────────────────────────
+showTable      = input.bool(true, "Show Dashboard", group="Dashboard")
+tablePos       = input.string("Top Right", "Position", options=["Top Right","Bottom Right","Top Left","Bottom Left"], group="Dashboard")
+textSize       = input.string("small", "Text Size", options=["tiny","small","normal","large"], group="Dashboard")
+plotIB         = input.bool(true, "IB High / Low", group="Plots")
+plotIBMid      = input.bool(true, "IB Midpoint", group="Plots")
+plotExtBull    = input.bool(true, "IB Bull Extensions (+50%, +100%)", group="Plots")
+plotExtBear    = input.bool(true, "IB Bear Extensions (-50%, -100%)", group="Plots")
+plotPRTH       = input.bool(true, "Prior RTH High / Low", group="Plots")
+plotALN        = input.bool(false, "ALN High / Low (Overnight)", group="Plots")
+plot930        = input.bool(false, "9:30 Open Line", group="Plots")
+bullColor      = input.color(#089981, "Bullish", group="Colors")
+bearColor      = input.color(#f23645, "Bearish", group="Colors")
+neutralColor   = input.color(#787b86, "Neutral", group="Colors")
+prthColor      = input.color(#ff9800, "Prior RTH", group="Colors")
+alnColor       = input.color(#2962ff, "ALN Levels", group="Colors")
+openColor      = input.color(#e040fb, "9:30 Open", group="Colors")
+
+// ─── SESSION DETECTION ───────────────────────────────────────
+tz = "America/New_York"
+inSess(sess) => not na(time(timeframe.period, sess, tz))
+
+isAsia   = inSess("2000-0200")
+isLondon = inSess("0200-0930")
+isRTH    = inSess("0930-1600")
+isIB     = inSess("0930-1030")
+h        = hour(time, tz)
+m        = minute(time, tz)
+
+newAsia   = isAsia and not isAsia[1]
+newLondon = isLondon and not isLondon[1]
+newRTH    = isRTH and not isRTH[1]
+
+// ─── TRACKING VARIABLES ─────────────────────────────────────
+// Overnight
+var float asiaHi   = na
+var float asiaLo   = na
+var float lonHi    = na
+var float lonLo    = na
+
+// Prior & Current RTH
+var float pRthHi   = na
+var float pRthLo   = na
+var float cRthHi   = na
+var float cRthLo   = na
+
+// IB
+var float ibHi     = na
+var float ibLo     = na
+var float lockIbHi = na
+var float lockIbLo = na
+var float ibCloseP = na
+var bool  ibDone   = false
+var bool  ibHiBrk  = false
+var bool  ibLoBrk  = false
+
+// Candle Captures
+var float open930  = na
+var float price940 = na
+var float hr9Open  = na
+var float hr10Open = na
+
+// 5 Tally Signals (1=bull, -1=bear, 0=neutral/pending)
+var int alnSig  = 0
+var int prthSig = 0
+var int sig940  = 0
+var int sig10am = 0
+var int ibSig   = 0
+
+// ═══════════════════════════════════════════════════════════════
+// OVERNIGHT: ASIA (8pm–2am ET)
+// ═══════════════════════════════════════════════════════════════
+if newAsia
+    asiaHi   := high
+    asiaLo   := low
+    lonHi    := na
+    lonLo    := na
+    // Reset daily candle captures for new trading day
+    hr9Open  := na
+    hr10Open := na
+    sig10am  := 0
+    open930  := na
+    price940 := na
+    sig940   := 0
+    alnSig   := 0
+
+if isAsia and not newAsia
+    asiaHi := math.max(asiaHi, high)
+    asiaLo := math.min(asiaLo, low)
+
+// ═══════════════════════════════════════════════════════════════
+// OVERNIGHT: LONDON (2am–9:30am ET)
+// ═══════════════════════════════════════════════════════════════
+if newLondon
+    lonHi := high
+    lonLo := low
+
+if isLondon and not newLondon
+    lonHi := math.max(lonHi, high)
+    lonLo := math.min(lonLo, low)
+
+// ═══════════════════════════════════════════════════════════════
+// PRE-RTH LIVE TRACKING (hints before NY open)
+// ═══════════════════════════════════════════════════════════════
+
+// ALN: classify developing pattern as London unfolds vs Asia range
+if not isRTH and not na(asiaHi) and not na(lonHi)
+    lonAbove = lonHi > asiaHi
+    lonBelow = lonLo < asiaLo
+    alnSig := lonAbove and not lonBelow ? 1 : lonBelow and not lonAbove ? -1 : 0
+
+// pRTH: preview where current price sits vs prior day NY H/L
+if not isRTH and not na(cRthHi)
+    prthSig := close > cRthHi ? 1 : close < cRthLo ? -1 : 0
+
+// ═══════════════════════════════════════════════════════════════
+// RTH OPEN (9:30am) — Lock ALN & pRTH, Reset Session
+// ═══════════════════════════════════════════════════════════════
+if newRTH
+    // Roll current RTH → prior RTH
+    if not na(cRthHi)
+        pRthHi := cRthHi
+        pRthLo := cRthLo
+    // Reset current session
+    open930  := open
+    cRthHi   := high
+    cRthLo   := low
+    // Reset IB
+    ibHi     := high
+    ibLo     := low
+    lockIbHi := na
+    lockIbLo := na
+    ibCloseP := na
+    ibDone   := false
+    ibHiBrk  := false
+    ibLoBrk  := false
+    ibSig    := 0
+
+    // ── Signal 1: ALN Pattern Classification ──
+    // London broke Asia high only → 72% bull continuation
+    // London broke Asia low only  → 68% bear continuation
+    // London inside or engulfs    → ~55% neutral
+    if not na(asiaHi) and not na(lonHi)
+        lonAbove = lonHi > asiaHi
+        lonBelow = lonLo < asiaLo
+        alnSig := lonAbove and not lonBelow ? 1 : lonBelow and not lonAbove ? -1 : 0
+    else
+        alnSig := 0
+
+    // ── Signal 2: pRTH Open Location ──
+    // Opens above pRTH high → 83.29% won't break back down
+    // Opens below pRTH low  → 83.29% won't break back up
+    // Opens inside pRTH     → 72.66% breaks at least one side
+    if not na(pRthHi)
+        prthSig := open > pRthHi ? 1 : open < pRthLo ? -1 : 0
+    else
+        prthSig := 0
+
+// ═══════════════════════════════════════════════════════════════
+// RTH ONGOING TRACKING
+// ═══════════════════════════════════════════════════════════════
+if isRTH and not newRTH
+    cRthHi := math.max(cRthHi, high)
+    cRthLo := math.min(cRthLo, low)
+
+// ═══════════════════════════════════════════════════════════════
+// IB TRACKING (9:30–10:30 ET)
+// ═══════════════════════════════════════════════════════════════
+if isIB and not newRTH
+    ibHi := math.max(ibHi, high)
+    ibLo := math.min(ibLo, low)
+
+// Lock IB at 10:30 transition
+if isRTH and not isIB and isIB[1] and not ibDone
+    lockIbHi := ibHi
+    lockIbLo := ibLo
+    ibCloseP := close[1]
+    ibDone   := true
+    // ── Signal 5: IB Close Position ──
+    // IB closes upper half → 81% IB high breaks
+    // IB closes lower half → 74% IB low breaks
+    ibSig := ibCloseP > (lockIbHi + lockIbLo) / 2 ? 1 : -1
+
+// Track IB breaks (post-lock)
+if isRTH and ibDone
+    if high > lockIbHi
+        ibHiBrk := true
+    if low < lockIbLo
+        ibLoBrk := true
+
+// ═══════════════════════════════════════════════════════════════
+// CANDLE CAPTURES
+// ═══════════════════════════════════════════════════════════════
+
+// ── Signal 3: 9:40 Candle Close ──
+// 9:40 > 9:30 (up move)   → 64% continuation, 36% fake-out
+// 9:40 < 9:30 (down move) → 62% continuation, 38% fake-out
+if h == 9 and m >= 40 and na(price940) and not na(open930)
+    price940 := open
+    sig940   := price940 > open930 ? 1 : -1
+
+// 9am hour open (9:00 candle open — for 10am comparison)
+if h == 9 and m == 0 and na(hr9Open)
+    hr9Open := open
+
+// ── Signal 4: 10am Candle Open (9am hour direction) ──
+// 10am open > 9am open (green hour) → 70% session closes green
+// 10am open < 9am open (red hour)   → 70% session closes red
+if h >= 10 and na(hr10Open) and not na(hr9Open)
+    hr10Open := open
+    sig10am  := hr10Open > hr9Open ? 1 : -1
+
+// ═══════════════════════════════════════════════════════════════
+// TALLY & EDGE RATING
+// ═══════════════════════════════════════════════════════════════
+bulls = (alnSig == 1 ? 1 : 0) + (prthSig == 1 ? 1 : 0) + (sig940 == 1 ? 1 : 0) + (sig10am == 1 ? 1 : 0) + (ibSig == 1 ? 1 : 0)
+bears = (alnSig == -1 ? 1 : 0) + (prthSig == -1 ? 1 : 0) + (sig940 == -1 ? 1 : 0) + (sig10am == -1 ? 1 : 0) + (ibSig == -1 ? 1 : 0)
+neuts = (alnSig == 0 ? 1 : 0) + (prthSig == 0 ? 1 : 0) + (sig940 == 0 ? 1 : 0) + (sig10am == 0 ? 1 : 0) + (ibSig == 0 ? 1 : 0)
+diff  = math.abs(bulls - bears)
+total = bulls + bears
+
+// Edge: STRONG (diff>=4) | GOOD (3) | MODERATE (2) | WEAK (1) | NONE (0)
+edgeRating = diff >= 4 ? "STRONG" : diff == 3 ? "GOOD" : diff == 2 ? "MODERATE" : diff == 1 ? "WEAK" : "NONE"
+biasDir    = bulls > bears ? "BULL" : bears > bulls ? "BEAR" : "MIXED"
+biasClr    = bulls > bears ? bullColor : bears > bulls ? bearColor : neutralColor
+
+focusText = total == 0 ? "AWAITING SIGNALS" :
+     edgeRating == "STRONG" or edgeRating == "GOOD" ? biasDir + " — " + edgeRating :
+     edgeRating == "MODERATE" ? biasDir + " — HALF SIZE" :
+     edgeRating == "WEAK" ? biasDir + " — QTR SIZE" :
+     "SIT ON HANDS"
+
+// ═══════════════════════════════════════════════════════════════
+// IB DERIVED VALUES
+// ═══════════════════════════════════════════════════════════════
+ibRange = ibDone ? lockIbHi - lockIbLo : na
+ibMid   = ibDone ? (lockIbHi + lockIbLo) / 2 : na
+
+// ═══════════════════════════════════════════════════════════════
+// PLOTS
+// ═══════════════════════════════════════════════════════════════
+canIB    = plotIB and isRTH and ibDone
+canMid   = plotIBMid and isRTH and ibDone
+canExtB  = plotExtBull and isRTH and ibDone
+canExtS  = plotExtBear and isRTH and ibDone
+canP     = plotPRTH and isRTH and not na(pRthHi)
+canALN   = plotALN and isRTH and not na(asiaHi)
+can930   = plot930 and isRTH and not na(open930)
+
+// IB Levels
+plot(canIB  ? lockIbHi : na, "IB High", color.new(bullColor, 30), 2, plot.style_linebr)
+plot(canIB  ? lockIbLo : na, "IB Low",  color.new(bearColor, 30), 2, plot.style_linebr)
+plot(canMid ? ibMid    : na, "IB Mid",  color.new(neutralColor, 50), 1, plot.style_linebr)
+
+// IB Bull Extension Targets
+plot(canExtB ? lockIbHi + ibRange * 0.5 : na, "IB +50%",  color.new(bullColor, 60), 1, plot.style_linebr)
+plot(canExtB ? lockIbHi + ibRange       : na, "IB +100%", color.new(bullColor, 40), 1, plot.style_linebr)
+
+// IB Bear Extension Targets
+plot(canExtS ? lockIbLo - ibRange * 0.5 : na, "IB -50%",  color.new(bearColor, 60), 1, plot.style_linebr)
+plot(canExtS ? lockIbLo - ibRange       : na, "IB -100%", color.new(bearColor, 40), 1, plot.style_linebr)
+
+// Prior RTH Levels
+plot(canP ? pRthHi : na, "PD NY High", color.new(prthColor, 30), 1, plot.style_linebr)
+plot(canP ? pRthLo : na, "PD NY Low",  color.new(prthColor, 30), 1, plot.style_linebr)
+
+// ALN Overnight Levels
+plot(canALN ? asiaHi : na, "Asia High", color.new(alnColor, 60), 1, plot.style_linebr)
+plot(canALN ? asiaLo : na, "Asia Low",  color.new(alnColor, 60), 1, plot.style_linebr)
+plot(canALN ? lonHi  : na, "Lon High",  color.new(alnColor, 30), 1, plot.style_linebr)
+plot(canALN ? lonLo  : na, "Lon Low",   color.new(alnColor, 30), 1, plot.style_linebr)
+
+// 9:30 Open Line
+plot(can930 ? open930 : na, "9:30 Open", color.new(openColor, 40), 1, plot.style_linebr)
+
+// ═══════════════════════════════════════════════════════════════
+// PRICE LABELS (pRTH — right edge of chart)
+// ═══════════════════════════════════════════════════════════════
+var label pdHiLabel = na
+var label pdLoLabel = na
+
+if barstate.islast and plotPRTH and not na(pRthHi)
+    if not na(pdHiLabel)
+        label.delete(pdHiLabel)
+    if not na(pdLoLabel)
+        label.delete(pdLoLabel)
+    pdHiLabel := label.new(bar_index + 2, pRthHi, "PD NY High (" + str.tostring(pRthHi, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
+    pdLoLabel := label.new(bar_index + 2, pRthLo, "PD NY Low (" + str.tostring(pRthLo, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD TABLE
+// ═══════════════════════════════════════════════════════════════
+var table dash = na
+if showTable and barstate.islast
+    pos = tablePos == "Top Right" ? position.top_right :
+         tablePos == "Bottom Right" ? position.bottom_right :
+         tablePos == "Top Left" ? position.top_left :
+         position.bottom_left
+
+    tSz = textSize == "tiny" ? size.tiny :
+         textSize == "small" ? size.small :
+         textSize == "normal" ? size.normal :
+         size.large
+
+    tfOk = timeframe.in_seconds() <= 600  // 10min or less
+    rows = tfOk ? 9 : 10
+    dash := table.new(pos, 2, rows, border_width=1, frame_color=color.new(chart.fg_color, 80))
+
+    // ── Header ──
+    table.cell(dash, 0, 0, "NQ EDGE",  bgcolor=color.new(neutralColor, 40), text_color=color.white, text_size=tSz)
+    table.cell(dash, 1, 0, "SIGNAL",   bgcolor=color.new(neutralColor, 40), text_color=color.white, text_size=tSz)
+
+    // ── Row 1: ALN Session ──
+    aT = alnSig == 1 ? "BULL — 72%" : alnSig == -1 ? "BEAR — 68%" : "NEUTRAL"
+    aC = alnSig == 1 ? bullColor : alnSig == -1 ? bearColor : neutralColor
+    hdrBg = color.new(neutralColor, 40)
+
+    table.cell(dash, 0, 1, "ALN Session", bgcolor=hdrBg, text_color=color.white, text_size=tSz)
+    table.cell(dash, 1, 1, aT, bgcolor=aC, text_color=color.white, text_size=tSz)
+
+    // ── Row 2: pRTH Open ──
+    pT = na(pRthHi) ? "NO DATA" : prthSig == 1 ? "GAP UP — 83%" : prthSig == -1 ? "GAP DN — 83%" : "INSIDE — 73%"
+    pC = prthSig == 1 ? bullColor : prthSig == -1 ? bearColor : neutralColor
+    table.cell(dash, 0, 2, "pRTH Open", bgcolor=hdrBg, text_color=color.white, text_size=tSz)
+    table.cell(dash, 1, 2, pT, bgcolor=pC, text_color=color.white, text_size=tSz)
+
+    // ── Row 3: 9:40 Candle Open ──
+    cT = na(price940) ? "PENDING 9:40" : sig940 == 1 ? "UP — 64% CONT" : "DN — 62% CONT"
+    cC = na(price940) ? neutralColor : sig940 == 1 ? bullColor : bearColor
+    table.cell(dash, 0, 3, "9:40 Candle Open", bgcolor=hdrBg, text_color=color.white, text_size=tSz)
+    table.cell(dash, 1, 3, cT, bgcolor=cC, text_color=color.white, text_size=tSz)
+
+    // ── Row 4: 9-10am 1H Close ──
+    tT = na(hr10Open) ? "PENDING 10:00" : sig10am == 1 ? "GREEN — 70%" : "RED — 70%"
+    tC = na(hr10Open) ? neutralColor : sig10am == 1 ? bullColor : bearColor
+    table.cell(dash, 0, 4, "9-10am 1H Close", bgcolor=hdrBg, text_color=color.white, text_size=tSz)
+    table.cell(dash, 1, 4, tT, bgcolor=tC, text_color=color.white, text_size=tSz)
+
+    // ── Row 5: IB Close Position ──
+    iT = not ibDone ? "PENDING 10:30" : ibSig == 1 ? "UPPER — 81%" : "LOWER — 74%"
+    iC = not ibDone ? neutralColor : ibSig == 1 ? bullColor : bearColor
+    table.cell(dash, 0, 5, "IB Close", bgcolor=hdrBg, text_color=color.white, text_size=tSz)
+    table.cell(dash, 1, 5, iT, bgcolor=iC, text_color=color.white, text_size=tSz)
+
+    // ── Row 6: IB Break (trade confirmation — not a tally signal) ──
+    // 96% break by 4pm | 82% single-side hold | 23% double break = edge gone
+    bT = not ibDone ? "IB FORMING" : ibHiBrk and ibLoBrk ? "BOTH — EDGE GONE" : ibHiBrk ? "HIGH ↑ — 82% ↑ Bias" : ibLoBrk ? "LOW ↓ — 82% ↓ Bias" : "PENDING — 96%"
+    bC = not ibDone ? neutralColor : ibHiBrk and ibLoBrk ? bearColor : ibHiBrk ? bullColor : ibLoBrk ? bearColor : neutralColor
+    table.cell(dash, 0, 6, "IB Break", bgcolor=hdrBg, text_color=color.white, text_size=tSz)
+    table.cell(dash, 1, 6, bT, bgcolor=bC, text_color=color.white, text_size=tSz)
+
+    // ── Row 7: IB Range ──
+    rT = not ibDone ? "SETTING..." : str.tostring(math.round(ibRange, 2)) + " pts"
+    table.cell(dash, 0, 7, "IB Range", bgcolor=hdrBg, text_color=color.white, text_size=tSz)
+    table.cell(dash, 1, 7, rT, bgcolor=hdrBg, text_color=color.white, text_size=tSz)
+
+    // ── Row 8: Edge Rating ──
+    tallyT = str.tostring(bulls) + "▲ " + str.tostring(bears) + "▼ " + str.tostring(neuts) + "—"
+    table.cell(dash, 0, 8, tallyT, bgcolor=biasClr, text_color=color.white, text_size=tSz)
+    table.cell(dash, 1, 8, focusText, bgcolor=biasClr, text_color=color.white, text_size=tSz)
+
+    // ── Row 9: Timeframe Warning (only if > 10min) ──
+    if not tfOk
+        table.cell(dash, 0, 9, "⚠ TF", bgcolor=bearColor, text_color=color.white, text_size=tSz)
+        table.cell(dash, 1, 9, "USE 1–10 MIN", bgcolor=bearColor, text_color=color.white, text_size=tSz)

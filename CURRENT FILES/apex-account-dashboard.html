@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apex EOD Pipeline Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0a0c10;--surface:#111318;--surface2:#171b22;--border:#1e232c;
+    --accent:#00e5a0;--text:#e8eaf0;--muted:#5a6070;
+    --green:#00e5a0;--blue:#0099ff;--orange:#ffaa00;--red:#ff4466;--purple:#9b6dff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:linear-gradient(rgba(0,229,160,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,160,.03) 1px,transparent 1px);
+    background-size:40px 40px;}
+  .wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:24px 20px;}
+
+  /* Header */
+  header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+  .logo{font-weight:900;font-size:22px;letter-spacing:-.5px;font-family:Arial Black,sans-serif;}
+  .logo span{color:var(--accent);}
+  .header-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+  .header-meta{text-align:right;font-size:11px;color:var(--muted);line-height:1.9;}
+  .header-meta strong{color:var(--text);font-size:13px;display:block;}
+
+  /* IO bar */
+  .io-bar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .io-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;}
+  .io-btn{font-size:11px;font-weight:700;padding:7px 14px;border-radius:5px;cursor:pointer;border:1px solid var(--accent);background:none;color:var(--accent);font-family:'Courier New',monospace;transition:all .15s;white-space:nowrap;}
+  .io-btn:hover{background:var(--accent);color:var(--bg);}
+  .io-btn.imp{border-color:var(--blue);color:var(--blue);}
+  .io-btn.imp:hover{background:var(--blue);color:var(--bg);}
+  .io-input{flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Courier New',monospace;font-size:11px;padding:7px 10px;outline:none;}
+  .io-input:focus{border-color:var(--blue);}
+  .io-msg{font-size:11px;color:var(--green);display:none;}
+
+  /* KPIs */
+  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;overflow:hidden;}
+  .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .kpi.c-green::before{background:var(--green);}.kpi.c-blue::before{background:var(--blue);}
+  .kpi.c-orange::before{background:var(--orange);}.kpi.c-purple::before{background:var(--purple);}
+  .kpi-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+  .kpi-val{font-size:28px;font-weight:900;line-height:1;font-family:Arial Black,sans-serif;}
+  .kpi-val.c-green{color:var(--green);}.kpi-val.c-blue{color:var(--blue);}
+  .kpi-val.c-orange{color:var(--orange);}.kpi-val.c-purple{color:var(--purple);}
+  .kpi-sub{font-size:10px;color:var(--muted);margin-top:4px;}
+
+  /* Layout */
+  .main-grid{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px;}
+  .right-panel{display:flex;flex-direction:column;gap:16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;}
+  .sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-family:Arial,sans-serif;}
+
+  .pipeline-bar { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  .pipeline-bar-top { display:flex; justify-content:space-between; align-items:center; }
+  /* Accounts panel */
+  .accounts-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+  .scrollable{overflow-x:auto;}
+  .add-btn{font-size:11px;color:var(--accent);cursor:pointer;border:1px solid var(--accent);border-radius:4px;padding:4px 12px;background:none;transition:all .15s;font-family:'Courier New',monospace;}
+  .add-btn:hover{background:var(--accent);color:var(--bg);}
+
+  table.at{width:100%;border-collapse:collapse;}
+  table.at th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;text-align:left;padding:0 10px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+  table.at td{padding:10px 10px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:middle;}
+  table.at tr.main-row:last-of-type td{border-bottom:none;}
+  table.at tr.main-row:hover td{background:rgba(255,255,255,.02);}
+  .acct-name{font-weight:700;font-size:13px;font-family:Arial Black,sans-serif;}
+  .acct-sub{font-size:9px;color:var(--muted);margin-top:2px;}
+
+  /* Expand toggle */
+  .expand-btn{font-size:11px;color:var(--muted);cursor:pointer;background:none;border:none;padding:2px 4px;line-height:1;transition:color .15s;}
+  .expand-btn:hover{color:var(--text);}
+
+  /* Payout history rows */
+  .payout-history-row td{background:var(--surface2)!important;padding:0!important;border-bottom:1px solid var(--border)!important;}
+  .payout-history-inner{padding:12px 16px 14px 40px;}
+  .payout-history-inner table{width:100%;border-collapse:collapse;}
+  .payout-history-inner th{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:0 8px 6px;text-align:left;border-bottom:1px solid var(--border);}
+  .payout-history-inner td{font-size:11px;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);}
+  .payout-history-inner tr:last-child td{border-bottom:none;}
+  .payout-total-row{display:flex;justify-content:flex-end;margin-top:10px;font-size:12px;font-weight:700;font-family:Arial Black,sans-serif;color:var(--green);}
+  .no-payouts{font-size:11px;color:var(--muted);padding:8px 0;}
+  .del-payout{font-size:9px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 5px;}
+  .del-payout:hover{color:var(--red);}
+
+  .badge{display:inline-block;font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;}
+  .b-eval   {background:rgba(155,109,255,.15);color:var(--purple);border:1px solid rgba(155,109,255,.3);}
+  .b-early  {background:rgba(0,153,255,.12);  color:var(--blue);  border:1px solid rgba(0,153,255,.25);}
+  .b-mid    {background:rgba(255,170,0,.12);  color:var(--orange);border:1px solid rgba(255,170,0,.25);}
+  .b-peak   {background:rgba(0,229,160,.12);  color:var(--green); border:1px solid rgba(0,229,160,.25);}
+  .b-retired{background:rgba(255,68,102,.12); color:var(--red);   border:1px solid rgba(255,68,102,.25);}
+
+  .pip-row{display:flex;gap:3px;}
+  .pip{width:10px;height:10px;border-radius:2px;}
+  .pip-done{background:var(--accent);}
+  .pip-cur{background:var(--orange);animation:blink 1.5s infinite;}
+  .pip-empty{background:var(--border);}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+  .dot-row{display:inline-flex;align-items:center;gap:4px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+  .dot-on{background:var(--green);}
+
+  .chip{display:inline-block;font-size:9px;padding:2px 7px;border-radius:3px;font-weight:600;}
+  .chip-ok  {background:rgba(0,229,160,.12);color:var(--green);}
+  .chip-warn{background:rgba(255,170,0,.12); color:var(--orange);}
+  .chip-off {background:rgba(255,68,102,.12);color:var(--red);}
+
+  .abtn{font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'Courier New',monospace;transition:all .15s;}
+  .abtn:hover{color:var(--text);border-color:var(--muted);}
+  .abtn-pay{border-color:rgba(0,229,160,.35);color:var(--accent);}
+  .abtn-pay:hover{background:var(--accent);color:var(--bg);}
+  .abtn-del:hover{border-color:var(--red);color:var(--red);}
+  .abtn-edit{border-color:rgba(0,153,255,.35);color:var(--blue);}
+  .abtn-edit:hover{background:var(--blue);color:var(--bg);}
+  .bal{font-weight:700;font-family:Arial Black,sans-serif;}
+  .empty-msg td{text-align:center;color:var(--muted);font-size:12px;padding:32px;}
+
+  /* Ladder */
+  table.lt{width:100%;border-collapse:collapse;margin-top:10px;}
+  table.lt th{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;text-align:right;padding:0 6px 8px;}
+  table.lt th:first-child{text-align:left;}
+  table.lt td{font-size:11px;padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.03);text-align:right;}
+  table.lt td:first-child{text-align:left;color:var(--muted);}
+  table.lt tr:last-child td{border-bottom:none;}
+
+  /* Rotation */
+  .rot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;}
+  .rot-box{border-radius:8px;padding:12px;border:1px solid;text-align:center;}
+  .rot-purple{border-color:rgba(155,109,255,.3);background:rgba(155,109,255,.06);}
+  .rot-blue  {border-color:rgba(0,153,255,.25); background:rgba(0,153,255,.06);}
+  .rot-orange{border-color:rgba(255,170,0,.25); background:rgba(255,170,0,.06);}
+  .rot-green {border-color:rgba(0,229,160,.25); background:rgba(0,229,160,.06);}
+  .rot-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+  .rot-purple .rot-lbl{color:var(--purple);}.rot-blue .rot-lbl{color:var(--blue);}
+  .rot-orange .rot-lbl{color:var(--orange);}.rot-green .rot-lbl{color:var(--green);}
+  .rot-num{font-size:20px;font-weight:900;font-family:Arial Black,sans-serif;}
+  .rot-sub{font-size:9px;color:var(--muted);margin-top:2px;}
+
+  /* Timeline */
+  .tl{display:flex;flex-direction:column;margin-top:10px;}
+  .tl-item{display:flex;gap:12px;padding-bottom:16px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-left{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+  .tl-dot{width:8px;height:8px;border-radius:50%;margin-top:3px;}
+  .tl-line{width:1px;flex:1;min-height:20px;background:var(--border);margin:4px 0;}
+  .tl-item:last-child .tl-line{display:none;}
+  .tl-title{font-size:11px;font-weight:700;margin-bottom:2px;font-family:Arial,sans-serif;}
+  .tl-desc{font-size:10px;color:var(--muted);line-height:1.5;}
+
+  /* Strategy */
+  .strat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:16px;}
+  .rules-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px;}
+  .rule-box{background:var(--surface2);border-radius:8px;padding:14px;border-left:3px solid;}
+  .rule-green{border-color:var(--green);}.rule-orange{border-color:var(--orange);}.rule-blue{border-color:var(--blue);}
+  .rule-title{font-size:11px;font-weight:700;margin-bottom:6px;font-family:Arial,sans-serif;}
+  .rule-green .rule-title{color:var(--green);}.rule-orange .rule-title{color:var(--orange);}.rule-blue .rule-title{color:var(--blue);}
+  .rule-desc{font-size:10px;color:var(--muted);line-height:1.6;}
+
+  /* Charts section */
+  .charts-section{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;}
+  .chart-wrap{position:relative;height:260px;margin-top:14px;}
+
+  /* Modal */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+  .overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:440px;max-width:95vw;max-height:90vh;overflow-y:auto;}
+  .modal-title{font-size:18px;font-weight:900;margin-bottom:20px;font-family:Arial Black,sans-serif;}
+  .frow{margin-bottom:15px;}
+  .flabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;display:block;}
+  .finput,.fselect{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Courier New',monospace;font-size:13px;padding:10px 12px;outline:none;transition:border-color .15s;}
+  .finput:focus,.fselect:focus{border-color:var(--accent);}
+  .fselect option{background:var(--surface2);}
+  .modal-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+  .mbtn{font-size:13px;font-weight:700;padding:10px 20px;border-radius:7px;cursor:pointer;border:none;transition:all .15s;font-family:Arial,sans-serif;}
+  .mbtn-ok{background:var(--accent);color:var(--bg);}
+  .mbtn-ok:hover{background:#00ffb3;}
+  .mbtn-cancel{background:transparent;color:var(--muted);border:1px solid var(--border);}
+  .mbtn-cancel:hover{color:var(--text);border-color:var(--muted);}
+
+  /* Payout entry modal */
+  .payout-modal-note{font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.6;padding:10px 12px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--orange);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="logo">APEX <span>EOD</span> PIPELINE</div>
+      <div class="header-sub">Performance Account Payout Tracker</div>
+    </div>
+    <div class="header-meta">
+      <strong id="clock">—</strong>
+      Target: <span id="header-target">20</span> PAs &nbsp;|&nbsp; Payouts/Acct: 6 &nbsp;|&nbsp; Min Payout: $500<br>
+      Min 5 qualifying days · $250/day · 50% consistency rule
+    </div>
+  </header>
+
+  <!-- Export/Import -->
+  <div class="io-bar">
+    <span class="io-label">Data Transfer</span>
+    <button class="io-btn" onclick="exportData()">⬆ Export My Accounts</button>
+    <span style="font-size:11px;color:var(--muted);">→ copy text below, paste it on your other device/site:</span>
+    <input class="io-input" id="io-export-box" placeholder="Click Export to generate your data..." readonly onclick="this.select()" />
+    <span style="font-size:11px;color:var(--muted);margin-left:8px;">Import:</span>
+    <input class="io-input" id="io-import-box" placeholder="Paste exported data here..." />
+    <button class="io-btn imp" onclick="importData()">⬇ Import</button>
+    <span class="io-msg" id="io-msg">✓ Imported!</span>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi c-green"><div class="kpi-label">Active PAs</div><div class="kpi-val c-green" id="kpi-active">0</div><div class="kpi-sub">of 20 max</div></div>
+    <div class="kpi c-purple"><div class="kpi-label">In Evaluation</div><div class="kpi-val c-purple" id="kpi-eval">0</div><div class="kpi-sub">pipeline replenishment</div></div>
+    <div class="kpi c-blue"><div class="kpi-label">Payouts Ready</div><div class="kpi-val c-blue" id="kpi-ready">0</div><div class="kpi-sub">eligible now</div></div>
+    <div class="kpi c-orange"><div class="kpi-label">Est. Next Payout</div><div class="kpi-val c-orange" id="kpi-next">$0</div><div class="kpi-sub">combined max caps</div></div>
+    <div class="kpi c-green"><div class="kpi-label">Total Extracted</div><div class="kpi-val c-green" id="kpi-total">$0</div><div class="kpi-sub">all approved payouts</div></div>
+  </div>
+
+  <!-- Pipeline Mix -->
+  <div class="pipeline-bar" id="pipeline-bar">
+    <div class="pipeline-bar-top">
+      <div>
+        <span class="sec-title">Pipeline Mix Target</span>
+        <span style="font-size:10px;color:var(--muted);margin-left:10px;">based on your target account count</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <label style="font-size:11px;color:var(--muted);">Target PA Count:</label>
+        <input type="number" id="target-count" min="1" max="20" value="20"
+          style="width:60px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:Courier New,monospace;font-size:13px;padding:5px 8px;outline:none;text-align:center;"
+          oninput="updatePipelineMix()" />
+        <span style="font-size:11px;color:var(--muted);">accounts</span>
+      </div>
+    </div>
+    <div class="rot-grid" style="margin-top:12px;" id="pipeline-mix-grid">
+      <div class="rot-box rot-purple"><div class="rot-lbl">Eval</div><div class="rot-num" style="color:var(--purple)" id="mix-eval">3–5</div><div class="rot-sub">always replenishing</div></div>
+      <div class="rot-box rot-blue">  <div class="rot-lbl">Early PA</div><div class="rot-num" style="color:var(--blue)" id="mix-early">5–7</div><div class="rot-sub">payouts 1–2</div></div>
+      <div class="rot-box rot-orange"><div class="rot-lbl">Mid PA</div><div class="rot-num" style="color:var(--orange)" id="mix-mid">5–7</div><div class="rot-sub">payouts 3–4</div></div>
+      <div class="rot-box rot-green"> <div class="rot-lbl">Peak PA</div><div class="rot-num" style="color:var(--green)" id="mix-peak">5–7</div><div class="rot-sub">payouts 5–6</div></div>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="main-grid">
+    <div class="accounts-panel">
+      <div class="sec-head">
+        <span class="sec-title">Account Pipeline</span>
+        <button class="add-btn" onclick="openModal()">+ Add Account</button>
+      </div>
+      <div class="scrollable">
+        <table class="at">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Account ID</th>
+              <th>Size</th>
+              <th>Type</th>
+              <th>Payout #</th>
+              <th>Balance</th>
+              <th>Drawdown</th>
+              <th>Safety Net</th>
+              <th>Qual Days</th>
+              <th>Next Cap</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="card">
+        <div class="sec-head"><span class="sec-title">EOD Payout Ladder</span></div>
+        <table class="lt">
+          <thead><tr><th>#</th><th>$25K</th><th>$50K</th><th>$100K</th><th>$150K</th></tr></thead>
+          <tbody>
+            <tr><td>1st</td><td style="color:var(--blue)">$1,000</td><td style="color:var(--blue)">$1,500</td><td style="color:var(--blue)">$2,000</td><td style="color:var(--blue)">$2,500</td></tr>
+            <tr><td>2nd</td><td style="color:var(--blue)">$1,000</td><td style="color:var(--blue)">$1,500</td><td style="color:var(--blue)">$2,500</td><td style="color:var(--blue)">$3,000</td></tr>
+            <tr><td>3rd</td><td style="color:var(--blue)">$1,000</td><td style="color:var(--orange)">$2,000</td><td style="color:var(--orange)">$2,500</td><td style="color:var(--orange)">$3,000</td></tr>
+            <tr><td>4th</td><td style="color:var(--orange)">$1,000</td><td style="color:var(--orange)">$2,500</td><td style="color:var(--orange)">$3,000</td><td style="color:var(--orange)">$3,000</td></tr>
+            <tr><td>5th</td><td style="color:var(--orange)">$1,000</td><td style="color:var(--orange)">$2,500</td><td style="color:var(--green)">$4,000</td><td style="color:var(--green)">$4,000</td></tr>
+            <tr><td>6th ✦</td><td style="color:var(--green)">$1,000</td><td style="color:var(--green)">$3,000</td><td style="color:var(--green)">$4,000</td><td style="color:var(--green)">$5,000</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:10px;font-size:9px;color:var(--muted);line-height:1.6;">✦ Account terminates after payout 6. Buy new eval at payout 5. Safety net = drawdown + $100.</div>
+      </div>
+
+      <div class="card">
+        <div class="sec-title" style="margin-bottom:10px;">Rolling Pipeline Rules</div>
+        <div class="tl">
+          <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--purple)"></div><div class="tl-line"></div></div><div><div class="tl-title" style="color:var(--purple)">Pass Eval → Activate PA</div><div class="tl-desc">No min trading days. Activate within 7 days. ~$99 activation fee.</div></div></div>
+          <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--blue)"></div><div class="tl-line"></div></div><div><div class="tl-title" style="color:var(--blue)">Payouts 1–2 (Early)</div><div class="tl-desc">Build 5 qualifying days ($250+). Watch the 50% consistency rule.</div></div></div>
+          <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--orange)"></div><div class="tl-line"></div></div><div><div class="tl-title" style="color:var(--orange)">Payouts 3–4 (Mid)</div><div class="tl-desc">Caps increase. Treat pending payouts as already withdrawn when sizing.</div></div></div>
+          <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--green)"></div><div class="tl-line"></div></div><div><div class="tl-title" style="color:var(--green)">Payout 5 → Buy New Eval</div><div class="tl-desc">Buy replacement immediately so it's PA-ready when payout 6 clears.</div></div></div>
+          <div class="tl-item"><div class="tl-left"><div class="tl-dot" style="background:var(--red)"></div></div><div><div class="tl-title" style="color:var(--red)">Payout 6 → Retired</div><div class="tl-desc">Max cap extracted. Account terminates. New eval fills the slot.</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-section">
+    <div class="chart-card">
+      <div class="sec-title">Total Extracted Per Account</div>
+      <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="sec-title">Cumulative Payouts Over Time</div>
+      <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Eligibility -->
+  <div class="strat-card">
+    <div class="sec-head">
+      <span class="sec-title">Payout Eligibility Checklist</span>
+      <span style="font-size:10px;color:var(--muted)">Must pass ALL before requesting</span>
+    </div>
+    <div class="rules-grid">
+      <div class="rule-box rule-green"><div class="rule-title">✓ 5 Qualifying Days</div><div class="rule-desc">Need 5 trading days with $250+ profit each. Non-consecutive is fine. Days below $250 do not count.</div></div>
+      <div class="rule-box rule-orange"><div class="rule-title">✓ 50% Consistency Rule</div><div class="rule-desc">No single profitable day can be 50%+ of total profit since last payout. Best day $1,500 → need $3,000+ total.</div></div>
+      <div class="rule-box rule-blue"><div class="rule-title">✓ Safety Net + Balance</div><div class="rule-desc">Balance must exceed safety net (drawdown + $100) and remain above it after withdrawal. Min payout $500.</div></div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- Account Modal -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Add Account</div>
+    <div class="frow"><label class="flabel">Account ID / Label</label><input class="finput" id="f-id" placeholder="e.g. APEX8724600000425" /></div>
+    <div class="frow"><label class="flabel">Account Size</label>
+      <select class="fselect" id="f-size">
+        <option value="25">$25,000</option><option value="50" selected>$50,000</option>
+        <option value="100">$100,000</option><option value="150">$150,000</option>
+      </select>
+    </div>
+    <div class="frow"><label class="flabel">Account Type / Drawdown</label>
+      <select class="fselect" id="f-type">
+        <option value="eod">EOD ($2,000 trailing max)</option>
+        <option value="legacy">Legacy Intraday ($2,500 trailing max)</option>
+      </select>
+    </div>
+    <div class="frow"><label class="flabel">Stage</label>
+      <select class="fselect" id="f-stage">
+        <option value="eval">Evaluation (not yet PA)</option>
+        <option value="early">Early PA (payouts 1–2)</option>
+        <option value="mid">Mid PA (payouts 3–4)</option>
+        <option value="peak">Peak PA (payouts 5–6)</option>
+        <option value="retired">Retired</option>
+      </select>
+    </div>
+    <div class="frow"><label class="flabel">Payouts Completed</label>
+      <select class="fselect" id="f-payouts">
+        <option value="0">0 — none yet</option><option value="1">1 completed</option>
+        <option value="2">2 completed</option><option value="3">3 completed</option>
+        <option value="4">4 completed</option><option value="5">5 completed</option>
+        <option value="6">6 completed (retired)</option>
+      </select>
+    </div>
+    <div class="frow"><label class="flabel">Current Balance ($)</label><input class="finput" id="f-balance" type="number" placeholder="e.g. 53500" /></div>
+    <div class="frow"><label class="flabel">Qualifying Days This Cycle</label>
+      <select class="fselect" id="f-days">
+        <option value="0">0 days</option><option value="1">1 day</option><option value="2">2 days</option>
+        <option value="3">3 days</option><option value="4">4 days</option><option value="5">5 days — eligible</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="mbtn mbtn-ok" id="modal-save-btn" onclick="saveAccount()">Add Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payout Entry Modal -->
+<div class="overlay" id="payout-overlay" onclick="closePayoutModal(event)">
+  <div class="modal">
+    <div class="modal-title">Log Payout</div>
+    <div class="payout-modal-note" id="payout-modal-note"></div>
+    <div class="frow"><label class="flabel">Actual Amount Received ($)</label>
+      <input class="finput" id="p-amount" type="number" placeholder="e.g. 1500" />
+    </div>
+    <div class="frow"><label class="flabel">Date Received</label>
+      <input class="finput" id="p-date" type="date" />
+    </div>
+    <div class="frow"><label class="flabel">Notes (optional)</label>
+      <input class="finput" id="p-note" type="text" placeholder="e.g. Payout 1 from APEX..." />
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="closePayoutModal()">Cancel</button>
+      <button class="mbtn mbtn-ok" onclick="confirmPayout()">Log Payout</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CAPS = {
+  25:  [1000,1000,1000,1000,1000,1000],
+  50:  [1500,1500,2000,2500,2500,3000],
+  100: [2000,2500,2500,3000,4000,4000],
+  150: [2500,3000,3000,3000,4000,5000]
+};
+
+let accounts = [];
+let editIdx  = -1;
+let payoutTargetIdx = -1;
+let barChart = null;
+let lineChart = null;
+
+try {
+  accounts = JSON.parse(localStorage.getItem('apex_accts') || '[]');
+  // Migrate: remove legacy extracted field so only payoutLog is used
+  var migrated = false;
+  accounts.forEach(function(a) {
+    if (typeof a.extracted !== 'undefined') { delete a.extracted; migrated = true; }
+    if (!a.payoutLog) { a.payoutLog = []; migrated = true; }
+  });
+  if (migrated) { localStorage.setItem('apex_accts', JSON.stringify(accounts)); }
+} catch(e) {}
+function save() { try { localStorage.setItem('apex_accts', JSON.stringify(accounts)); } catch(e) {} }
+
+// ── Export / Import ────────────────────────────────────────
+function exportData() {
+  var data = localStorage.getItem('apex_accts') || '[]';
+  var box = document.getElementById('io-export-box');
+  box.value = data; box.select();
+  try { document.execCommand('copy'); } catch(e) {}
+}
+function importData() {
+  var raw = document.getElementById('io-import-box').value.trim();
+  if (!raw) { alert('Paste your exported data into the Import field first.'); return; }
+  try {
+    var parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error();
+    localStorage.setItem('apex_accts', JSON.stringify(parsed));
+    accounts = parsed; render(); renderCharts();
+    document.getElementById('io-import-box').value = '';
+    var msg = document.getElementById('io-msg');
+    msg.style.display = 'inline';
+    setTimeout(function(){ msg.style.display='none'; }, 3000);
+  } catch(e) { alert('Import failed — make sure you copied the full export text.'); }
+}
+
+// ── Account Modal ──────────────────────────────────────────
+function openModal() {
+  editIdx = -1;
+  document.getElementById('modal-title').textContent = 'Add Account';
+  document.getElementById('modal-save-btn').textContent = 'Add Account';
+  document.getElementById('f-id').value = '';
+  document.getElementById('f-balance').value = '';
+  document.getElementById('f-size').value = '50';
+  document.getElementById('f-type').value = 'eod';
+  document.getElementById('f-stage').value = 'eval';
+  document.getElementById('f-payouts').value = '0';
+  document.getElementById('f-days').value = '0';
+  document.getElementById('overlay').classList.add('open');
+}
+function openEdit(i) {
+  editIdx = i;
+  var a = accounts[i];
+  document.getElementById('modal-title').textContent = 'Edit Account';
+  document.getElementById('modal-save-btn').textContent = 'Save Changes';
+  document.getElementById('f-id').value = a.id;
+  document.getElementById('f-size').value = a.size;
+  document.getElementById('f-type').value = a.acctType || 'eod';
+  document.getElementById('f-stage').value = a.stage;
+  document.getElementById('f-payouts').value = a.payouts;
+  document.getElementById('f-balance').value = a.balance;
+  document.getElementById('f-days').value = Math.min(a.days, 5);
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('overlay'))
+    document.getElementById('overlay').classList.remove('open');
+}
+function saveAccount() {
+  var id      = document.getElementById('f-id').value.trim() || ('ACCT-'+Date.now());
+  var size    = parseInt(document.getElementById('f-size').value);
+  var acctType= document.getElementById('f-type').value;
+  var stage   = document.getElementById('f-stage').value;
+  var payouts = parseInt(document.getElementById('f-payouts').value);
+  var balance = parseFloat(document.getElementById('f-balance').value) || size*1000;
+  var days    = parseInt(document.getElementById('f-days').value);
+  var record  = { id:id, size:size, acctType:acctType, stage:stage, payouts:payouts, balance:balance, days:days, payoutLog: editIdx>=0 ? (accounts[editIdx].payoutLog||[]) : [] };
+  if (editIdx >= 0) { accounts[editIdx] = record; } else { accounts.push(record); }
+  save(); render(); renderCharts(); closeModal();
+}
+
+// ── Payout Modal ───────────────────────────────────────────
+function openPayoutModal(i) {
+  payoutTargetIdx = i;
+  var a = accounts[i];
+  var caps = CAPS[a.size] || CAPS[50];
+  var capAmt = a.payouts < 6 ? caps[a.payouts] : 0;
+  document.getElementById('payout-modal-note').textContent =
+    'Account: ' + a.id + ' — Payout #' + (a.payouts+1) + ' of 6. Max cap for this payout: $' + capAmt.toLocaleString() + '.';
+  document.getElementById('p-amount').value = '';
+  document.getElementById('p-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('p-note').value = '';
+  document.getElementById('payout-overlay').classList.add('open');
+}
+function closePayoutModal(e) {
+  if (!e || e.target === document.getElementById('payout-overlay'))
+    document.getElementById('payout-overlay').classList.remove('open');
+}
+function confirmPayout() {
+  var amount = parseFloat(document.getElementById('p-amount').value);
+  if (!amount || amount <= 0) { alert('Please enter a valid payout amount.'); return; }
+  var date   = document.getElementById('p-date').value || new Date().toISOString().split('T')[0];
+  var note   = document.getElementById('p-note').value.trim();
+  var a = accounts[payoutTargetIdx];
+  if (!a.payoutLog) a.payoutLog = [];
+  a.payoutLog.push({ amount:amount, date:date, note:note, payoutNum: a.payouts+1 });
+  a.payouts += 1;
+  a.days = 0;
+  if (a.payouts >= 6)      { a.stage='retired'; alert('Payout 6 complete! '+a.id+' is now retired.\n→ Buy a new eval to fill this slot.'); }
+  else if (a.payouts >= 5) { a.stage='peak'; }
+  else if (a.payouts >= 3) { a.stage='mid'; }
+  else                     { a.stage='early'; }
+  save(); render(); renderCharts();
+  document.getElementById('payout-overlay').classList.remove('open');
+}
+function deletePayoutEntry(acctIdx, logIdx) {
+  if (!confirm('Remove this payout entry? This will NOT decrement the payout counter.')) return;
+  accounts[acctIdx].payoutLog.splice(logIdx, 1);
+  save(); render(); renderCharts();
+}
+
+// ── Other actions ──────────────────────────────────────────
+function del(i) {
+  if (!confirm('Remove this account?')) return;
+  accounts.splice(i,1); save(); render(); renderCharts();
+}
+function addDay(i) {
+  if (accounts[i].days < 5) { accounts[i].days+=1; save(); render(); }
+}
+
+// ── Expand/collapse payout history ────────────────────────
+var expanded = {};
+function toggleExpand(i) {
+  expanded[i] = !expanded[i];
+  render();
+}
+
+// ── Render helpers ─────────────────────────────────────────
+function typeBadge(t) {
+  if (t==='legacy') return '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(155,109,255,.12);color:var(--purple);border:1px solid rgba(155,109,255,.3);">LEGACY</span>';
+  return '<span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(0,153,255,.1);color:var(--blue);border:1px solid rgba(0,153,255,.25);">EOD</span>';
+}
+function pips(done) {
+  var h='<div class="pip-row">';
+  for(var i=0;i<6;i++) h+='<div class="pip '+(i<done?'pip-done':i===done&&done<6?'pip-cur':'pip-empty')+'"></div>';
+  return h+'</div>';
+}
+function dots(d) {
+  var h='<div class="dot-row">';
+  for(var i=0;i<5;i++) h+='<div class="dot'+(i<d?' dot-on':'')+'"></div>';
+  return h+'<span style="margin-left:5px;font-size:10px;color:'+(d>=5?'var(--green)':'var(--muted)')+'">'+d+'/5</span></div>';
+}
+function fmtDate(ds) {
+  if (!ds) return '—';
+  var parts = ds.split('-');
+  if (parts.length < 3) return ds;
+  return parts[1]+'/'+parts[2]+'/'+parts[0];
+}
+
+// ── Main render ────────────────────────────────────────────
+function render() {
+  var tbody = document.getElementById('tbody');
+  if (!accounts.length) {
+    tbody.innerHTML = '<tr class="empty-msg"><td colspan="12">No accounts yet — click &ldquo;+ Add Account&rdquo; to begin tracking</td></tr>';
+    return kpis();
+  }
+  var html = '';
+  for (var i=0; i<accounts.length; i++) {
+    var a = accounts[i];
+    var dd = (a.acctType==='legacy') ? 2500 : 2000;
+    var safetyNet = (a.size*1000)+dd+100;
+    var caps = CAPS[a.size]||CAPS[50];
+    var cap  = a.payouts<6 ? caps[a.payouts] : 0;
+    var capStr = cap ? '<span style="color:'+(a.payouts>=4?'var(--green)':'var(--orange)')+'">$'+cap.toLocaleString()+'</span>' : '<span style="color:var(--red)">Done</span>';
+    var ready = a.stage!=='eval'&&a.stage!=='retired'&&a.days>=5&&a.payouts<6;
+    var statusEl = a.stage==='retired' ? '<span class="chip chip-off">RETIRED</span>'
+                 : ready               ? '<span class="chip chip-ok">READY ✓</span>'
+                 : a.stage==='eval'    ? '<span class="chip chip-warn">IN EVAL</span>'
+                 : '<span class="chip chip-warn">+'+(5-Math.min(a.days,5))+' days</span>';
+    var dayBtn = (a.stage!=='eval'&&a.stage!=='retired'&&a.days<5) ? '<button class="abtn" onclick="addDay('+i+')">+Day</button>' : '';
+    var payBtn = (a.stage!=='eval'&&a.stage!=='retired'&&a.payouts<6) ? '<button class="abtn abtn-pay" onclick="openPayoutModal('+i+')">Log Payout</button>' : '';
+
+    var log = a.payoutLog || [];
+    var totalExtracted = log.reduce(function(s,p){ return s+p.amount; }, 0);
+    var isExp = !!expanded[i];
+    var expandIcon = isExp ? '▲' : '▼';
+    var expandTitle = isExp ? 'Collapse' : 'Show payout history ('+log.length+')';
+
+    // Main row
+    html += '<tr class="main-row">'
+      + '<td><button class="expand-btn" onclick="toggleExpand('+i+')" title="'+expandTitle+'">'+expandIcon+'</button></td>'
+      + '<td><div class="acct-name">'+a.id+'</div><div class="acct-sub" style="color:var(--green)">$'+totalExtracted.toLocaleString()+' extracted</div></td>'
+      + '<td>$'+a.size+'K</td>'
+      + '<td>'+typeBadge(a.acctType)+'</td>'
+      + '<td>'+pips(a.payouts)+'<div style="font-size:9px;color:var(--muted);margin-top:3px">'+a.payouts+'/6 done</div></td>'
+      + '<td><span class="bal">$'+(a.balance||0).toLocaleString()+'</span></td>'
+      + '<td><span style="color:var(--orange)">$'+dd.toLocaleString()+'</span><div style="font-size:9px;color:var(--muted)">'+(a.acctType==='legacy'?'intraday':'EOD')+'</div></td>'
+      + '<td><span style="color:var(--green);font-size:11px">$'+safetyNet.toLocaleString()+'</span><div style="font-size:9px;color:var(--muted)">min balance</div></td>'
+      + '<td>'+(a.stage!=='eval'?dots(Math.min(a.days,5)):'<span style="color:var(--muted)">—</span>')+'</td>'
+      + '<td>'+capStr+'</td>'
+      + '<td>'+statusEl+'</td>'
+      + '<td style="display:flex;gap:5px;flex-wrap:wrap;min-width:150px"><button class="abtn abtn-edit" onclick="openEdit('+i+')">Edit</button>'+dayBtn+payBtn+'<button class="abtn abtn-del" onclick="del('+i+')">✕</button></td>'
+      + '</tr>';
+
+    // Expandable payout history row
+    if (isExp) {
+      var histHtml = '<tr class="payout-history-row"><td colspan="12"><div class="payout-history-inner">';
+      if (log.length === 0) {
+        histHtml += '<div class="no-payouts">No payouts logged yet for this account.</div>';
+      } else {
+        histHtml += '<table><thead><tr><th>#</th><th>Date</th><th>Amount</th><th>Notes</th><th></th></tr></thead><tbody>';
+        for (var j=0; j<log.length; j++) {
+          var p = log[j];
+          histHtml += '<tr>'
+            + '<td style="color:var(--muted)">Payout '+p.payoutNum+'</td>'
+            + '<td>'+fmtDate(p.date)+'</td>'
+            + '<td style="color:var(--green);font-weight:700">$'+p.amount.toLocaleString()+'</td>'
+            + '<td style="color:var(--muted)">'+( p.note||'—')+'</td>'
+            + '<td><button class="del-payout" onclick="deletePayoutEntry('+i+','+j+')" title="Remove entry">✕</button></td>'
+            + '</tr>';
+        }
+        histHtml += '</tbody></table>';
+        histHtml += '<div class="payout-total-row">Total: $'+totalExtracted.toLocaleString()+'</div>';
+      }
+      histHtml += '</div></td></tr>';
+      html += histHtml;
+    }
+  }
+  tbody.innerHTML = html;
+  kpis();
+}
+
+function kpis() {
+  var pas  = accounts.filter(function(a){ return a.stage!=='eval'&&a.stage!=='retired'; });
+  var evl  = accounts.filter(function(a){ return a.stage==='eval'; });
+  var rdy  = pas.filter(function(a){ return a.days>=5&&a.payouts<6; });
+  var nxt  = pas.filter(function(a){ return a.payouts<6; }).reduce(function(s,a){ return s+((CAPS[a.size]||CAPS[50])[a.payouts]||0); },0);
+  var extr = accounts.reduce(function(s,a){ return s+(a.payoutLog||[]).reduce(function(x,p){ return x+p.amount; },0); },0);
+  document.getElementById('kpi-active').textContent = pas.length;
+  document.getElementById('kpi-eval').textContent   = evl.length;
+  document.getElementById('kpi-ready').textContent  = rdy.length;
+  document.getElementById('kpi-next').textContent   = '$'+nxt.toLocaleString();
+  document.getElementById('kpi-total').textContent  = '$'+extr.toLocaleString();
+}
+
+// ── Charts ─────────────────────────────────────────────────
+function renderCharts() {
+  renderBarChart();
+  renderLineChart();
+}
+
+function chartDefaults() {
+  return {
+    color: '#5a6070',
+    borderColor: '#1e232c',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color:'#5a6070', font:{ size:9 } }, grid:{ color:'rgba(255,255,255,0.04)' } },
+      y: { min: 0, ticks: { color:'#5a6070', font:{ size:9 }, callback: function(v){ return '$'+v.toLocaleString(); } }, grid:{ color:'rgba(255,255,255,0.04)' } }
+    }
+  };
+}
+
+function renderBarChart() {
+  var labels = accounts.map(function(a){ return a.id.slice(-6); });
+  var data   = accounts.map(function(a){ return (a.payoutLog||[]).reduce(function(s,p){ return s+p.amount; },0); });
+  var ctx = document.getElementById('barChart').getContext('2d');
+  if (barChart) barChart.destroy();
+  barChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: 'rgba(0,229,160,0.25)',
+        borderColor: 'rgba(0,229,160,0.8)',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: Object.assign(chartDefaults(), { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:function(c){ return ' $'+c.parsed.y.toLocaleString(); } } } }
+    })
+  });
+}
+
+function renderLineChart() {
+  // Collect all payout events across all accounts, sort by date
+  var events = [];
+  accounts.forEach(function(a) {
+    (a.payoutLog||[]).forEach(function(p) {
+      events.push({ date: p.date||'2024-01-01', amount: p.amount, id: a.id });
+    });
+  });
+  events.sort(function(a,b){ return a.date.localeCompare(b.date); });
+
+  var labels = [];
+  var cumData = [];
+  var running = 0;
+  events.forEach(function(e) {
+    running += e.amount;
+    labels.push(fmtDate(e.date));
+    cumData.push(running);
+  });
+
+  // If no events yet show placeholder
+  if (!labels.length) { labels = ['No payouts yet']; cumData = [0]; }
+
+  var ctx = document.getElementById('lineChart').getContext('2d');
+  if (lineChart) lineChart.destroy();
+  lineChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: cumData,
+        borderColor: 'rgba(0,153,255,0.8)',
+        backgroundColor: 'rgba(0,153,255,0.08)',
+        borderWidth: 2,
+        pointBackgroundColor: 'rgba(0,153,255,1)',
+        pointRadius: 4,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: Object.assign(chartDefaults(), { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:function(c){ return ' $'+c.parsed.y.toLocaleString(); } } } }
+    })
+  });
+}
+
+function clock() {
+  document.getElementById('clock').textContent = new Date().toLocaleString('en-US',{
+    weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'
+  });
+}
+
+function updatePipelineMix() {
+  var t = parseInt(document.getElementById('target-count').value) || 20;
+  // Save target
+  try { localStorage.setItem('apex_target', t); } catch(e) {}
+  // Update header
+  var ht = document.getElementById('header-target');
+  if (ht) ht.textContent = t;
+  // Eval: always 15-25% of target, min 2
+  var evalMin = Math.max(2, Math.round(t * 0.15));
+  var evalMax = Math.max(3, Math.round(t * 0.25));
+  // Each PA stage gets roughly a third of the remaining
+  var paSlots = t - Math.round((evalMin+evalMax)/2);
+  var stageMin = Math.max(1, Math.round(paSlots / 3) - 1);
+  var stageMax = Math.max(2, Math.round(paSlots / 3) + 1);
+  document.getElementById('mix-eval').textContent  = evalMin + '–' + evalMax;
+  document.getElementById('mix-early').textContent = stageMin + '–' + stageMax;
+  document.getElementById('mix-mid').textContent   = stageMin + '–' + stageMax;
+  document.getElementById('mix-peak').textContent  = stageMin + '–' + stageMax;
+}
+
+// Load saved target
+(function() {
+  try {
+    var saved = localStorage.getItem('apex_target');
+    if (saved) document.getElementById('target-count').value = saved;
+  } catch(e) {}
+  updatePipelineMix();
+})();
+
+render();
+renderCharts();
+clock();
+setInterval(clock, 1000);
+</script>
+</body>
+</html>
