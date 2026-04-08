@@ -12,8 +12,10 @@ indicator("NQ Edge — Statistical Dashboard", overlay=true, max_lines_count=50,
 showTable      = input.bool(true, "Show Dashboard", group="Dashboard")
 tablePos       = input.string("Top Right", "Position", options=["Top Right","Bottom Right","Top Left","Bottom Left"], group="Dashboard")
 textSize       = input.string("small", "Text Size", options=["tiny","small","normal","large"], group="Dashboard")
-tableTextClr   = input.color(color.white, "Table Text Color", group="Dashboard")
-tableLabelBg   = input.color(#787b86, "Label Background", group="Dashboard")
+tableTextClr   = input.color(color.white, "Header / Label Text", group="Dashboard")
+tableLabelBg   = input.color(#787b86, "Header / Label Background", group="Dashboard")
+sigTextClr     = input.color(color.white, "Signal Text", group="Dashboard")
+tallyTextClr   = input.color(color.white, "Tally Text", group="Dashboard")
 plotIB         = input.bool(true, "IB High / Low", group="Plots")
 plotIBMid      = input.bool(true, "IB Midpoint", group="Plots")
 plotExtBull    = input.bool(true, "IB Bull Extensions (+50%, +100%)", group="Plots")
@@ -352,6 +354,8 @@ if showTable and barstate.islast
     dimBg  = color.new(tableLabelBg, 75)
     dimTxt = color.new(tableTextClr, 60)
     tClr   = tableTextClr
+    sClr   = sigTextClr
+    taClr  = tallyTextClr
 
     // Tally text size — one step up from body for emphasis
     tallySz = textSize == "tiny" ? size.small : textSize == "small" ? size.normal : textSize == "normal" ? size.large : size.large
@@ -366,7 +370,7 @@ if showTable and barstate.islast
         aT = alnSig == 1 ? "BULL — 72%" : alnSig == -1 ? "BEAR — 68%" : "NEUTRAL — 55%"
         aC = alnSig == 1 ? bullColor : alnSig == -1 ? bearColor : neutralColor
         table.cell(dash, 0, 1, "ALN Session", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 1, aT, bgcolor=aC, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 1, aT, bgcolor=aC, text_color=sClr, text_size=tSz)
     else
         table.cell(dash, 0, 1, "ALN Session", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
         table.cell(dash, 1, 1, "— AWAITING LONDON", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
@@ -376,7 +380,7 @@ if showTable and barstate.islast
         pT = prthSig == 1 ? "GAP UP — 83%" : prthSig == -1 ? "GAP DN — 83%" : "INSIDE — 73%"
         pC = prthSig == 1 ? bullColor : prthSig == -1 ? bearColor : neutralColor
         table.cell(dash, 0, 2, "pRTH Open", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 2, pT, bgcolor=pC, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 2, pT, bgcolor=pC, text_color=sClr, text_size=tSz)
     else
         table.cell(dash, 0, 2, "pRTH Open", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
         table.cell(dash, 1, 2, "— NO PRIOR DATA", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
@@ -386,7 +390,7 @@ if showTable and barstate.islast
         cT = sig940 == 1 ? "UP — 64% CONT" : "DN — 62% CONT"
         cC = sig940 == 1 ? bullColor : bearColor
         table.cell(dash, 0, 3, "9:40 Candle Open", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 3, cT, bgcolor=cC, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 3, cT, bgcolor=cC, text_color=sClr, text_size=tSz)
     else
         table.cell(dash, 0, 3, "9:40 Candle Open", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
         table.cell(dash, 1, 3, "— PENDING 9:40", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
@@ -396,7 +400,7 @@ if showTable and barstate.islast
         tT = sig10am == 1 ? "GREEN — 70%" : "RED — 70%"
         tC = sig10am == 1 ? bullColor : bearColor
         table.cell(dash, 0, 4, "9-10am 1H Close", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 4, tT, bgcolor=tC, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 4, tT, bgcolor=tC, text_color=sClr, text_size=tSz)
     else
         table.cell(dash, 0, 4, "9-10am 1H Close", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
         table.cell(dash, 1, 4, "— PENDING 10:00", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
@@ -406,7 +410,7 @@ if showTable and barstate.islast
         iT = ibSig == 1 ? "UPPER — 81%" : "LOWER — 74%"
         iC = ibSig == 1 ? bullColor : bearColor
         table.cell(dash, 0, 5, "IB Close", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 5, iT, bgcolor=iC, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 5, iT, bgcolor=iC, text_color=sClr, text_size=tSz)
     else
         table.cell(dash, 0, 5, "IB Close", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
         table.cell(dash, 1, 5, "— PENDING 10:30", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
@@ -416,7 +420,7 @@ if showTable and barstate.islast
         bT = ibHiBrk and ibLoBrk ? "BOTH — EDGE GONE" : ibHiBrk ? "HIGH ↑ — 82% ↑ Bias" : ibLoBrk ? "LOW ↓ — 82% ↓ Bias" : "PENDING — 96%"
         bC = ibHiBrk and ibLoBrk ? bearColor : ibHiBrk ? bullColor : ibLoBrk ? bearColor : neutralColor
         table.cell(dash, 0, 6, "IB Break", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 6, bT, bgcolor=bC, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 6, bT, bgcolor=bC, text_color=sClr, text_size=tSz)
     else
         table.cell(dash, 0, 6, "IB Break", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
         table.cell(dash, 1, 6, "— WAITING FOR IB", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
@@ -432,8 +436,8 @@ if showTable and barstate.islast
 
     // ── Row 8: Edge Rating (bold — larger text) ──
     tallyT = str.tostring(bulls) + "▲ " + str.tostring(bears) + "▼ " + str.tostring(neuts) + "—"
-    table.cell(dash, 0, 8, tallyT, bgcolor=biasClr, text_color=tClr, text_size=tallySz)
-    table.cell(dash, 1, 8, focusText, bgcolor=biasClr, text_color=tClr, text_size=tallySz)
+    table.cell(dash, 0, 8, tallyT, bgcolor=biasClr, text_color=taClr, text_size=tallySz)
+    table.cell(dash, 1, 8, focusText, bgcolor=biasClr, text_color=taClr, text_size=tallySz)
 
     // ── Row 9: Timeframe Warning (only if > 10min) ──
     if not tfOk
