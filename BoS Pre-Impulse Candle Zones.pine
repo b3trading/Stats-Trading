@@ -7,12 +7,11 @@ indicator("BoS Pre-Impulse Candle Zones", overlay=true, max_boxes_count=500)
 //──────────────────────────────────────────────────────────────────────────────
 grpBos   = "BoS Detection"
 pivotLen  = input.int(10, "Swing Pivot Length", minval=2, group=grpBos, tooltip="Bars left/right for swing detection. Higher = fewer, more significant swings.")
-zoneBars  = input.int(3, "Zone Width (candles around swing)", minval=1, maxval=10, group=grpBos, tooltip="How many candles around the swing point to include in the zone range.")
 
 grpZone  = "Zone Settings"
 extendBars = input.int(200, "Extend Zone Right (bars)", minval=1, maxval=5000, group=grpZone)
 maxZones   = input.int(15, "Max Zones", minval=1, maxval=200, group=grpZone)
-invalidateMode = input.string("Freeze", "On Invalidation", options=["Delete", "Freeze"], group=grpZone, tooltip="Delete: remove zone. Freeze: stop extending.")
+invalidateMode = input.string("Freeze", "On Invalidation", options=["Delete", "Freeze"], group=grpZone)
 
 grpVisual = "Visuals"
 touchRule    = input.string("Wick touch", "Touch Rule (for fade)", options=["Wick touch", "Close inside"], group=grpVisual)
@@ -47,7 +46,7 @@ if not na(pl)
     swLoUsed := false
 
 //──────────────────────────────────────────────────────────────────────────────
-// BoS Detection — close through swing, fires once per swing
+// BoS — close through swing, fires once per swing
 //──────────────────────────────────────────────────────────────────────────────
 bullBoS = not swHiUsed and not na(swHi) and close > swHi
 bearBoS = not swLoUsed and not na(swLo) and close < swLo
@@ -61,42 +60,35 @@ var array<bool> zoneActive  = array.new<bool>()
 var array<bool> zoneTouched = array.new<bool>()
 
 //──────────────────────────────────────────────────────────────────────────────
-// Zone creation helper — builds zone around a swing point
-//──────────────────────────────────────────────────────────────────────────────
-f_createZone(_swBar, _demand) =>
-    offset = bar_index - _swBar
-    if offset > 0 and offset < 500
-        // Gather high/low of candles around the swing point
-        halfW = math.floor(zoneBars / 2)
-        float topZ = high[offset]
-        float botZ = low[offset]
-        for i = math.max(1, offset - halfW) to math.min(offset + halfW, 499)
-            topZ := math.max(topZ, high[i])
-            botZ := math.min(botZ, low[i])
-        // Create box
-        c  = _demand ? demandColor : supplyColor
-        leftBar = _swBar - halfW
-        bx = box.new(leftBar, topZ, leftBar + extendBars, botZ, border_color=c, bgcolor=color.new(c, baseTrans), border_width=borderWidth)
-        array.push(zoneBoxes, bx)
-        array.push(zoneDemand, _demand)
-        array.push(zoneActive, true)
-        array.push(zoneTouched, false)
-    true
-
-//──────────────────────────────────────────────────────────────────────────────
 // Create zones on BoS
-// Bullish BoS → demand zone at the most recent SWING LOW (impulse origin)
-// Bearish BoS → supply zone at the most recent SWING HIGH (impulse origin)
+// Bullish BoS → demand zone at the swing low candle
+// Bearish BoS → supply zone at the swing high candle
 //──────────────────────────────────────────────────────────────────────────────
 if bullBoS
     swHiUsed := true
     if not na(swLoBar)
-        f_createZone(swLoBar, true)
+        offset = bar_index - swLoBar
+        if offset > 0
+            topZ = high[offset]
+            botZ = low[offset]
+            bx = box.new(swLoBar, topZ, bar_index + extendBars, botZ, border_color=demandColor, bgcolor=color.new(demandColor, baseTrans), border_width=borderWidth)
+            array.push(zoneBoxes, bx)
+            array.push(zoneDemand, true)
+            array.push(zoneActive, true)
+            array.push(zoneTouched, false)
 
 if bearBoS
     swLoUsed := true
     if not na(swHiBar)
-        f_createZone(swHiBar, false)
+        offset = bar_index - swHiBar
+        if offset > 0
+            topZ = high[offset]
+            botZ = low[offset]
+            bx = box.new(swHiBar, topZ, bar_index + extendBars, botZ, border_color=supplyColor, bgcolor=color.new(supplyColor, baseTrans), border_width=borderWidth)
+            array.push(zoneBoxes, bx)
+            array.push(zoneDemand, false)
+            array.push(zoneActive, true)
+            array.push(zoneTouched, false)
 
 // Trim oldest
 while array.size(zoneBoxes) > maxZones
