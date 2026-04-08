@@ -1,173 +1,146 @@
 // This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 //@version=6
-indicator("BoS Pre-Impulse Candle Zones (Auto Extending + Touch Fade)", overlay=true, max_boxes_count=500)
+indicator("BoS Pre-Impulse Candle Zones", overlay=true, max_boxes_count=500)
 
 //──────────────────────────────────────────────────────────────────────────────
 // Inputs
 //──────────────────────────────────────────────────────────────────────────────
 grpBos   = "BoS Detection"
-pivotLen = input.int(5, "Swing pivot length", minval=1, group=grpBos, tooltip="Used for structure. Higher = fewer, more significant swings.")
-useWick  = input.bool(true, "BoS uses wick (high/low) instead of close", group=grpBos, tooltip="If ON: bullish BoS triggers when high breaks prior swing high; bearish when low breaks prior swing low. If OFF: uses close.")
-maxSearch = input.int(20, "Search back bars for last opposite candle", minval=1, maxval=500, group=grpBos, tooltip="How far back to look for the last down candle (bull BoS) or last up candle (bear BoS).")
+pivotLen  = input.int(5, "Swing Pivot Length", minval=1, group=grpBos, tooltip="Bars left/right for swing detection. Higher = fewer, more significant swings.")
+maxSearch = input.int(20, "Search Back Bars", minval=1, maxval=500, group=grpBos, tooltip="How far back to look for the pre-impulse candle.")
 
-grpZone  = "Zone Plotting"
-extendBars = input.int(150, "Extend zone right (bars)", minval=1, maxval=5000, group=grpZone, tooltip="How many bars to extend the rectangle to the right from the candle that forms the zone.")
-maxZones   = input.int(20, "Max zones kept", minval=1, maxval=200, group=grpZone, tooltip="Limits the number of zones on chart. Oldest will be removed first.")
-invalidateMode = input.string("Freeze", "On invalidation", options=["Delete", "Freeze"], group=grpZone, tooltip="Delete: remove zone. Freeze: keep zone but stop extending it further.")
+grpZone  = "Zone Settings"
+extendBars = input.int(150, "Extend Zone Right (bars)", minval=1, maxval=5000, group=grpZone)
+maxZones   = input.int(20, "Max Zones", minval=1, maxval=200, group=grpZone)
+invalidateMode = input.string("Freeze", "On Invalidation", options=["Delete", "Freeze"], group=grpZone, tooltip="Delete: remove zone. Freeze: stop extending.")
 
-grpTouch = "Touch + Visual"
-touchRule = input.string("Wick touch", "Touch rule", options=["Wick touch", "Close inside"], group=grpTouch, tooltip="Wick touch: any overlap of candle range with zone. Close inside: close must be within the zone.")
-baseTrans   = input.int(80, "Base fill transparency", minval=0, maxval=100, group=grpTouch, tooltip="Higher = more transparent.")
-touchedTrans= input.int(92, "Touched fill transparency (lighter)", minval=0, maxval=100, group=grpTouch, tooltip="Applied after first touch. Higher = lighter/more transparent.")
-
-demandColor = input.color(color.new(color.green, 0), "Demand zone color", group=grpTouch, tooltip="Bullish BoS zone color.")
-supplyColor = input.color(color.new(color.red,   0), "Supply zone color", group=grpTouch, tooltip="Bearish BoS zone color.")
+grpVisual = "Visuals"
+touchRule    = input.string("Wick touch", "Touch Rule (for fade)", options=["Wick touch", "Close inside"], group=grpVisual, tooltip="What counts as a 'touch' to fade the zone.")
+baseTrans    = input.int(80, "Zone Transparency", minval=0, maxval=100, group=grpVisual)
+touchedTrans = input.int(92, "Touched Transparency", minval=0, maxval=100, group=grpVisual)
+demandColor  = input.color(color.green, "Demand Zone Color", group=grpVisual)
+supplyColor  = input.color(color.red, "Supply Zone Color", group=grpVisual)
 
 //──────────────────────────────────────────────────────────────────────────────
-// Internal state: last confirmed swing high/low
+// Swing Detection
 //──────────────────────────────────────────────────────────────────────────────
 ph = ta.pivothigh(high, pivotLen, pivotLen)
-pl = ta.pivotlow(low,  pivotLen, pivotLen)
+pl = ta.pivotlow(low, pivotLen, pivotLen)
 
-var float lastSwingHigh = na
-var int   lastSwingHighBar = na
-var float lastSwingLow  = na
-var int   lastSwingLowBar  = na
+var float swingHi    = na
+var int   swingHiBar = na
+var bool  swingHiUsed = true
 
+var float swingLo    = na
+var int   swingLoBar = na
+var bool  swingLoUsed = true
+
+// New swing confirmed — mark as unused (available for BoS)
 if not na(ph)
-    lastSwingHigh     := ph
-    lastSwingHighBar  := bar_index - pivotLen
+    swingHi     := ph
+    swingHiBar  := bar_index - pivotLen
+    swingHiUsed := false
 
 if not na(pl)
-    lastSwingLow      := pl
-    lastSwingLowBar   := bar_index - pivotLen
-
-// BoS trigger price
-bullBreak = useWick ? high : close
-bearBreak = useWick ? low  : close
-
-bullBoS = not na(lastSwingHigh) and bar_index > lastSwingHighBar and bullBreak > lastSwingHigh
-bearBoS = not na(lastSwingLow)  and bar_index > lastSwingLowBar  and bearBreak < lastSwingLow
+    swingLo     := pl
+    swingLoBar  := bar_index - pivotLen
+    swingLoUsed := false
 
 //──────────────────────────────────────────────────────────────────────────────
-// Zone storage
+// BoS Detection (close-based, fires once per swing)
 //──────────────────────────────────────────────────────────────────────────────
-var box[]  zones      = array.new_box()
-var bool[] isDemand   = array.new_bool()
-var bool[] isActive   = array.new_bool()
-var bool[] wasTouched = array.new_bool()
-
-// helper: remove oldest if over limit
-f_trim_to_limit() =>
-    while array.size(zones) > maxZones
-        bx = array.shift(zones)
-        array.shift(isDemand)
-        array.shift(isActive)
-        array.shift(wasTouched)
-        if not na(bx)
-            box.delete(bx)
-    true
-
-// helper: test touch
-f_touched(_top, _bot) =>
-    bool result = false
-    if touchRule == "Wick touch"
-        result := high >= _bot and low <= _top
-    else if touchRule == "Close inside"
-        result := close <= _top and close >= _bot
-    result
-
-// helper: find last opposite candle offset
-// Bullish BoS -> last DOWN candle (close < open)
-// Bearish BoS -> last UP candle (close > open)
-f_findOppOffset(_wantDown) =>
-    int found = na
-    for i = 1 to maxSearch
-        isDown = close[i] < open[i]
-        isUp   = close[i] > open[i]
-        if (_wantDown and isDown) or (not _wantDown and isUp)
-            found := i
-            break
-    found
-
-// helper: add zone from an offset candle
-f_add_zone(_offset, _demand) =>
-    if not na(_offset)
-        left  = bar_index - _offset
-        right = left + extendBars
-        topZ  = high[_offset]
-        botZ  = low[_offset]
-
-        c     = _demand ? demandColor : supplyColor
-        bx    = box.new(left=left, top=topZ, right=right, bottom=botZ,
-                        bgcolor=color.new(c, baseTrans),
-                        border_color=color.new(c, 0),
-                        border_width=1)
-
-        array.push(zones, bx)
-        array.push(isDemand, _demand)
-        array.push(isActive, true)
-        array.push(wasTouched, false)
-        f_trim_to_limit()
-    true
+bullBoS = not swingHiUsed and not na(swingHi) and bar_index > swingHiBar and close > swingHi
+bearBoS = not swingLoUsed and not na(swingLo) and bar_index > swingLoBar and close < swingLo
 
 //──────────────────────────────────────────────────────────────────────────────
-// Create zones on BoS (fire once per breakout, then reset)
+// Zone Storage (parallel arrays)
+//──────────────────────────────────────────────────────────────────────────────
+var array<box>  zoneBoxes   = array.new<box>()
+var array<bool> zoneDemand  = array.new<bool>()
+var array<bool> zoneActive  = array.new<bool>()
+var array<bool> zoneTouched = array.new<bool>()
+
+//──────────────────────────────────────────────────────────────────────────────
+// Find pre-impulse candle and create zone
 //──────────────────────────────────────────────────────────────────────────────
 if bullBoS
-    off = f_findOppOffset(true)
-    f_add_zone(off, true)
-    lastSwingHigh := na  // prevent re-trigger on subsequent bars
+    swingHiUsed := true
+    int offset = na
+    for i = 1 to maxSearch
+        if close[i] < open[i]
+            offset := i
+            break
+    if not na(offset)
+        c  = demandColor
+        bx = box.new(bar_index - offset, high[offset], bar_index - offset + extendBars, low[offset], border_color=c, bgcolor=color.new(c, baseTrans), border_width=1)
+        array.push(zoneBoxes, bx)
+        array.push(zoneDemand, true)
+        array.push(zoneActive, true)
+        array.push(zoneTouched, false)
 
 if bearBoS
-    off = f_findOppOffset(false)
-    f_add_zone(off, false)
-    lastSwingLow := na  // prevent re-trigger on subsequent bars
+    swingLoUsed := true
+    int offset = na
+    for i = 1 to maxSearch
+        if close[i] > open[i]
+            offset := i
+            break
+    if not na(offset)
+        c  = supplyColor
+        bx = box.new(bar_index - offset, high[offset], bar_index - offset + extendBars, low[offset], border_color=c, bgcolor=color.new(c, baseTrans), border_width=1)
+        array.push(zoneBoxes, bx)
+        array.push(zoneDemand, false)
+        array.push(zoneActive, true)
+        array.push(zoneTouched, false)
+
+// Trim oldest zones if over limit
+while array.size(zoneBoxes) > maxZones
+    old = array.shift(zoneBoxes)
+    array.shift(zoneDemand)
+    array.shift(zoneActive)
+    array.shift(zoneTouched)
+    if not na(old)
+        box.delete(old)
 
 //──────────────────────────────────────────────────────────────────────────────
-// Update zones each bar: touch fade + invalidation handling
+// Update zones: touch fade + close-based invalidation
 //──────────────────────────────────────────────────────────────────────────────
-if array.size(zones) > 0
-    for idx = 0 to array.size(zones) - 1
-        bx = array.get(zones, idx)
+if array.size(zoneBoxes) > 0
+    for idx = array.size(zoneBoxes) - 1 to 0
+        bx = array.get(zoneBoxes, idx)
         if na(bx)
+            array.remove(zoneBoxes, idx)
+            array.remove(zoneDemand, idx)
+            array.remove(zoneActive, idx)
+            array.remove(zoneTouched, idx)
             continue
 
-        active  = array.get(isActive, idx)
-        demand  = array.get(isDemand, idx)
-        touched = array.get(wasTouched, idx)
-
-        if not active
+        if not array.get(zoneActive, idx)
             continue
 
-        topZ = box.get_top(bx)
-        botZ = box.get_bottom(bx)
+        topZ    = box.get_top(bx)
+        botZ    = box.get_bottom(bx)
+        demand  = array.get(zoneDemand, idx)
+        touched = array.get(zoneTouched, idx)
 
-        // Touch -> lighten fill (once)
-        if not touched and f_touched(topZ, botZ)
-            c = demand ? demandColor : supplyColor
-            box.set_bgcolor(bx, color.new(c, touchedTrans))
-            array.set(wasTouched, idx, true)
+        // Touch fade (first touch only)
+        if not touched
+            isTouched = touchRule == "Wick touch" ? (high >= botZ and low <= topZ) : (close <= topZ and close >= botZ)
+            if isTouched
+                c = demand ? demandColor : supplyColor
+                box.set_bgcolor(bx, color.new(c, touchedTrans))
+                array.set(zoneTouched, idx, true)
 
-        // Invalidation: close on opposite side
+        // Invalidation: CLOSE through the zone (not just a wick)
         invalid = demand ? (close < botZ) : (close > topZ)
 
         if invalid
             if invalidateMode == "Delete"
                 box.delete(bx)
-                array.set(zones, idx, box(na))
-                array.set(isActive, idx, false)
+                array.remove(zoneBoxes, idx)
+                array.remove(zoneDemand, idx)
+                array.remove(zoneActive, idx)
+                array.remove(zoneTouched, idx)
             else
                 box.set_right(bx, bar_index)
-                array.set(isActive, idx, false)
-
-// Clean up deleted slots
-if barstate.islast
-    int i = array.size(zones) - 1
-    while i >= 0
-        if na(array.get(zones, i))
-            array.remove(zones, i)
-            array.remove(isDemand, i)
-            array.remove(isActive, i)
-            array.remove(wasTouched, i)
-        i -= 1
+                array.set(zoneActive, idx, false)
