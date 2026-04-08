@@ -286,7 +286,7 @@ canIB    = plotIB and isRTH and ibDone
 canMid   = plotIBMid and isRTH and ibDone
 canExtB  = plotExtBull and isRTH and ibDone
 canExtS  = plotExtBear and isRTH and ibDone
-canP     = plotPRTH and isRTH and not na(pRthHi)
+canP     = plotPRTH and not na(pRthHi)
 canALN   = plotALN and isRTH and not na(asiaHi)
 can930   = plot930 and isRTH and not na(open930)
 
