@@ -294,8 +294,8 @@ if barstate.islast and plotPRTH and not na(pRthHi)
         label.delete(pdHiLabel)
     if not na(pdLoLabel)
         label.delete(pdLoLabel)
-    pdHiLabel := label.new(bar_index + 2, pRthHi, "PD NY High (" + str.tostring(pRthHi, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
-    pdLoLabel := label.new(bar_index + 2, pRthLo, "PD NY Low (" + str.tostring(pRthLo, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
+    pdHiLabel := label.new(bar_index + 20, pRthHi, "PD NY High (" + str.tostring(pRthHi, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
+    pdLoLabel := label.new(bar_index + 20, pRthLo, "PD NY Low (" + str.tostring(pRthLo, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
 
 // ═══════════════════════════════════════════════════════════════
 // DASHBOARD TABLE
