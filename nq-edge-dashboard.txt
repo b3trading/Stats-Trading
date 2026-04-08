@@ -182,6 +182,11 @@ if isRTH and not newRTH
 // ═══════════════════════════════════════════════════════════════
 rthEnd = isRTH[1] and not isRTH
 if rthEnd
+    // Roll today's completed RTH → pRTH so overnight shows correct levels
+    if not na(cRthHi)
+        pRthHi := cRthHi
+        pRthLo := cRthLo
+    // Reset intraday signals
     open930  := na
     price940 := na
     sig940   := 0
@@ -303,9 +308,7 @@ plot(canExtB ? lockIbHi + ibRange       : na, "IB +100%", color.new(bullColor, 4
 plot(canExtS ? lockIbLo - ibRange * 0.5 : na, "IB -50%",  color.new(bearColor, 60), 1, plot.style_linebr)
 plot(canExtS ? lockIbLo - ibRange       : na, "IB -100%", color.new(bearColor, 40), 1, plot.style_linebr)
 
-// Prior RTH Levels
-plot(canP ? pRthHi : na, "PD NY High", color.new(prthColor, 30), 1, plot.style_linebr)
-plot(canP ? pRthLo : na, "PD NY Low",  color.new(prthColor, 30), 1, plot.style_linebr)
+// Prior RTH Levels (line objects for clean horizontals — no zig-zag)
 
 // ALN Overnight Levels
 plot(canALN ? asiaHi : na, "Asia High", color.new(alnColor, 60), 1, plot.style_linebr)
@@ -319,10 +322,20 @@ plot(can930 ? open930 : na, "9:30 Open", color.new(openColor, 40), 1, plot.style
 // ═══════════════════════════════════════════════════════════════
 // PRICE LABELS (pRTH — right edge of chart)
 // ═══════════════════════════════════════════════════════════════
+var line  pdHiLine  = na
+var line  pdLoLine  = na
 var label pdHiLabel = na
 var label pdLoLabel = na
 
 if barstate.islast and plotPRTH and not na(pRthHi)
+    // Lines
+    if not na(pdHiLine)
+        line.delete(pdHiLine)
+    if not na(pdLoLine)
+        line.delete(pdLoLine)
+    pdHiLine := line.new(bar_index - 500, pRthHi, bar_index + 20, pRthHi, color=color.new(prthColor, 30), width=1, style=line.style_solid)
+    pdLoLine := line.new(bar_index - 500, pRthLo, bar_index + 20, pRthLo, color=color.new(prthColor, 30), width=1, style=line.style_solid)
+    // Labels
     if not na(pdHiLabel)
         label.delete(pdHiLabel)
     if not na(pdLoLabel)
