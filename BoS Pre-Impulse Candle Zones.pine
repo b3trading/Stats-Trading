@@ -5,45 +5,49 @@ indicator("BoS Pre-Impulse Candle Zones", overlay=true, max_boxes_count=500)
 //──────────────────────────────────────────────────────────────────────────────
 // Inputs
 //──────────────────────────────────────────────────────────────────────────────
-grpBos   = "BoS Detection"
-pivotLen  = input.int(10, "Swing Pivot Length", minval=2, group=grpBos, tooltip="Bars left/right for swing detection. Higher = fewer, more significant swings.")
-useBody   = input.bool(true, "Zone = Candle Body (not wicks)", group=grpBos, tooltip="ON: zone covers open-to-close (tighter). OFF: zone covers high-to-low (wider).")
+pivotLen  = input.int(5, "Swing Pivot Length", minval=2, group="BoS Detection")
+useBody   = input.bool(true, "Zone = Candle Body (not wicks)", group="BoS Detection")
+showBoS   = input.bool(true, "Show BoS Markers", group="BoS Detection", tooltip="Triangles where BoS triggers — useful for debugging.")
 
-grpZone  = "Zone Settings"
-extendBars = input.int(200, "Extend Zone Right (bars)", minval=1, maxval=5000, group=grpZone)
-maxZones   = input.int(15, "Max Zones", minval=1, maxval=200, group=grpZone)
-invalidateMode = input.string("Freeze", "On Invalidation", options=["Delete", "Freeze"], group=grpZone)
+maxZones       = input.int(15, "Max Zones", minval=1, maxval=100, group="Zone Settings")
+invalidateMode = input.string("Freeze", "On Invalidation", options=["Delete", "Freeze"], group="Zone Settings")
 
-grpVisual = "Visuals"
-touchRule    = input.string("Wick touch", "Touch Rule (for fade)", options=["Wick touch", "Close inside"], group=grpVisual)
-baseTrans    = input.int(85, "Zone Transparency", minval=0, maxval=100, group=grpVisual)
-touchedTrans = input.int(93, "Touched Transparency", minval=0, maxval=100, group=grpVisual)
-demandColor  = input.color(color.green, "Demand Zone Color", group=grpVisual)
-supplyColor  = input.color(color.red, "Supply Zone Color", group=grpVisual)
-borderWidth  = input.int(1, "Border Width", minval=0, maxval=4, group=grpVisual)
+baseTrans    = input.int(85, "Zone Transparency", minval=0, maxval=100, group="Visuals")
+touchedTrans = input.int(93, "Touched Transparency", minval=0, maxval=100, group="Visuals")
+demandColor  = input.color(color.green, "Demand Zone Color", group="Visuals")
+supplyColor  = input.color(color.red, "Supply Zone Color", group="Visuals")
+borderWidth  = input.int(1, "Border Width", minval=0, maxval=4, group="Visuals")
 
 //──────────────────────────────────────────────────────────────────────────────
-// Swing Detection
+// Swing Detection — store candle OHLC at detection time
 //──────────────────────────────────────────────────────────────────────────────
 ph = ta.pivothigh(high, pivotLen, pivotLen)
 pl = ta.pivotlow(low, pivotLen, pivotLen)
 
-var float swHi    = na
+var float swHi = na
 var int   swHiBar = na
+var float swHiCandleTop = na
+var float swHiCandleBot = na
 var bool  swHiUsed = true
 
-var float swLo    = na
+var float swLo = na
 var int   swLoBar = na
+var float swLoCandleTop = na
+var float swLoCandleBot = na
 var bool  swLoUsed = true
 
 if not na(ph)
     swHi     := ph
     swHiBar  := bar_index - pivotLen
+    swHiCandleTop := useBody ? math.max(open[pivotLen], close[pivotLen]) : high[pivotLen]
+    swHiCandleBot := useBody ? math.min(open[pivotLen], close[pivotLen]) : low[pivotLen]
     swHiUsed := false
 
 if not na(pl)
     swLo     := pl
     swLoBar  := bar_index - pivotLen
+    swLoCandleTop := useBody ? math.max(open[pivotLen], close[pivotLen]) : high[pivotLen]
+    swLoCandleBot := useBody ? math.min(open[pivotLen], close[pivotLen]) : low[pivotLen]
     swLoUsed := false
 
 //──────────────────────────────────────────────────────────────────────────────
@@ -51,6 +55,10 @@ if not na(pl)
 //──────────────────────────────────────────────────────────────────────────────
 bullBoS = not swHiUsed and not na(swHi) and close > swHi
 bearBoS = not swLoUsed and not na(swLo) and close < swLo
+
+// Debug markers
+plotshape(showBoS and bullBoS, "Bull BoS", shape.triangleup, location.belowbar, demandColor, size=size.tiny)
+plotshape(showBoS and bearBoS, "Bear BoS", shape.triangledown, location.abovebar, supplyColor, size=size.tiny)
 
 //──────────────────────────────────────────────────────────────────────────────
 // Zone Storage
@@ -62,34 +70,26 @@ var array<bool> zoneTouched = array.new<bool>()
 
 //──────────────────────────────────────────────────────────────────────────────
 // Create zones on BoS
-// Bullish BoS → demand zone at the swing low candle
-// Bearish BoS → supply zone at the swing high candle
+// Bullish BoS → demand zone at the swing LOW candle
+// Bearish BoS → supply zone at the swing HIGH candle
 //──────────────────────────────────────────────────────────────────────────────
 if bullBoS
     swHiUsed := true
-    if not na(swLoBar)
-        offset = bar_index - swLoBar
-        if offset > 0
-            topZ = useBody ? math.max(open[offset], close[offset]) : high[offset]
-            botZ = useBody ? math.min(open[offset], close[offset]) : low[offset]
-            bx = box.new(swLoBar, topZ, bar_index + extendBars, botZ, border_color=demandColor, bgcolor=color.new(demandColor, baseTrans), border_width=borderWidth)
-            array.push(zoneBoxes, bx)
-            array.push(zoneDemand, true)
-            array.push(zoneActive, true)
-            array.push(zoneTouched, false)
+    if not na(swLoBar) and not na(swLoCandleTop)
+        bx = box.new(swLoBar, swLoCandleTop, bar_index, swLoCandleBot, border_color=demandColor, bgcolor=color.new(demandColor, baseTrans), border_width=borderWidth, extend=extend.right)
+        array.push(zoneBoxes, bx)
+        array.push(zoneDemand, true)
+        array.push(zoneActive, true)
+        array.push(zoneTouched, false)
 
 if bearBoS
     swLoUsed := true
-    if not na(swHiBar)
-        offset = bar_index - swHiBar
-        if offset > 0
-            topZ = useBody ? math.max(open[offset], close[offset]) : high[offset]
-            botZ = useBody ? math.min(open[offset], close[offset]) : low[offset]
-            bx = box.new(swHiBar, topZ, bar_index + extendBars, botZ, border_color=supplyColor, bgcolor=color.new(supplyColor, baseTrans), border_width=borderWidth)
-            array.push(zoneBoxes, bx)
-            array.push(zoneDemand, false)
-            array.push(zoneActive, true)
-            array.push(zoneTouched, false)
+    if not na(swHiBar) and not na(swHiCandleTop)
+        bx = box.new(swHiBar, swHiCandleTop, bar_index, swHiCandleBot, border_color=supplyColor, bgcolor=color.new(supplyColor, baseTrans), border_width=borderWidth, extend=extend.right)
+        array.push(zoneBoxes, bx)
+        array.push(zoneDemand, false)
+        array.push(zoneActive, true)
+        array.push(zoneTouched, false)
 
 // Trim oldest
 while array.size(zoneBoxes) > maxZones
@@ -101,7 +101,7 @@ while array.size(zoneBoxes) > maxZones
         box.delete(old)
 
 //──────────────────────────────────────────────────────────────────────────────
-// Update zones: touch fade + close-based invalidation
+// Update zones: touch = invalidate (stop extending)
 //──────────────────────────────────────────────────────────────────────────────
 if array.size(zoneBoxes) > 0
     for idx = array.size(zoneBoxes) - 1 to 0
@@ -116,27 +116,17 @@ if array.size(zoneBoxes) > 0
         if not array.get(zoneActive, idx)
             continue
 
-        topZ    = box.get_top(bx)
-        botZ    = box.get_bottom(bx)
-        demand  = array.get(zoneDemand, idx)
-        touched = array.get(zoneTouched, idx)
+        topZ   = box.get_top(bx)
+        botZ   = box.get_bottom(bx)
+        demand = array.get(zoneDemand, idx)
 
-        // Touch fade
-        if not touched
-            isTouched = false
-            if touchRule == "Wick touch"
-                isTouched := high >= botZ and low <= topZ
-            else if touchRule == "Close inside"
-                isTouched := close <= topZ and close >= botZ
-            if isTouched
-                c = demand ? demandColor : supplyColor
-                box.set_bgcolor(bx, color.new(c, touchedTrans))
-                array.set(zoneTouched, idx, true)
+        // Touched = price enters zone (wick or close)
+        touched = high >= botZ and low <= topZ
 
-        // Invalidation: CLOSE through the zone
+        // Invalidation: close through the zone
         invalid = demand ? (close < botZ) : (close > topZ)
 
-        if invalid
+        if invalid or touched
             if invalidateMode == "Delete"
                 box.delete(bx)
                 array.remove(zoneBoxes, idx)
@@ -145,4 +135,5 @@ if array.size(zoneBoxes) > 0
                 array.remove(zoneTouched, idx)
             else
                 box.set_right(bx, bar_index)
+                box.set_extend(bx, extend.none)
                 array.set(zoneActive, idx, false)
