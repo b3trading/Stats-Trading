@@ -1,0 +1,194 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=6
+indicator("IB Range, Pullback %'s, Extensions", overlay = true, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 100)
+
+// --- Inputs ---
+grp_sess = "Session Settings"
+sessionInput  = input.session("0930-1030", "IB Session", group = grp_sess, tooltip = "The timeframe to determine the Initial Balance.")
+nySession     = input.session("0930-1600", "NY Session", group = grp_sess, tooltip = "The full New York trading session for shading.")
+sessionTime   = input.string("UTC-5", "Session Timezone", group = grp_sess, tooltip = "Timezone for the sessions.")
+extendLines   = input.bool(false, "Extend Levels Into Next Day", group = grp_sess, tooltip = "If disabled, levels stop updating after the NY session ends. If enabled, they extend indefinitely.")
+
+grp_ib = "IB High/Low Settings"
+showIbLines   = input.bool(true, "Show IB High/Low", group = grp_ib)
+ibColor       = input.color(#5b9cf6, "IB Color", group = grp_ib)
+ibWidth       = input.int(2, "IB Line Width", minval = 1, group = grp_ib)
+ibStyle       = input.string(line.style_solid, "IB Line Style", options = [line.style_solid, line.style_dashed, line.style_dotted], group = grp_ib)
+
+grp_q = "IB Quarter (Retracement) Settings"
+showQuarters  = input.bool(true, "Show IB Quarters", group = grp_q)
+qColor        = input.color(color.new(#5b9cf6, 50), "Quarter Color", group = grp_q)
+qWidth        = input.int(1, "Quarter Width", minval = 1, group = grp_q)
+qStyle        = input.string(line.style_dashed, "Quarter Style", options = [line.style_solid, line.style_dashed, line.style_dotted], group = grp_q)
+
+grp_ext = "Extension Settings"
+showExts      = input.bool(true, "Show Extensions", group = grp_ext)
+extUpColor    = input.color(#089981, "Upper Extension Color", group = grp_ext)
+extDnColor    = input.color(#f23645, "Lower Extension Color", group = grp_ext)
+extWidth      = input.int(1, "Extension Width", minval = 1, group = grp_ext)
+extStyle      = input.string(line.style_solid, "Extension Style", options = [line.style_solid, line.style_dashed, line.style_dotted], group = grp_ext)
+
+grp_style = "Visual Settings"
+showShading     = input.bool(true, "Shade Current IB", group = grp_style)
+showHistShading = input.bool(false, "Shade Historical IB", group = grp_style)
+showHistLevels  = input.bool(false, "Show Historical Levels", group = grp_style)
+shadingColor    = input.color(color.new(#5b9cf6, 90), "Shading Color", group = grp_style)
+textSize        = input.string(size.small, "Text Size", options = [size.tiny, size.small, size.normal, size.large, size.huge], group = grp_style)
+showPrice       = input.bool(true, "Show Prices in Labels", group = grp_style)
+
+// --- Logic ---
+inSession   = not na(time(timeframe.period, sessionInput, sessionTime))
+inNySession = not na(time(timeframe.period, nySession, sessionTime))
+isNewSession = inSession and not inSession[1]
+
+var float ibHigh = na
+var float ibLow  = na
+var int   ibStartBar = na
+var int   nyEndBar = na
+var int   highBar = 0
+var int   lowBar = 0
+var box   ibBox = na
+
+// Track last bar of NY session
+if inNySession
+    nyEndBar := bar_index
+
+// Line & Label Variables
+var line lHigh = na, var label lbHigh = na
+var line lLow = na, var label lbLow = na
+var line lQ1 = na, var label lbQ1 = na
+var line lMid = na, var label lbMid = na
+var line lQ3 = na, var label lbQ3 = na
+var line lUp50 = na, var label lbUp50 = na
+var line lUp100 = na, var label lbUp100 = na
+var line lUp150 = na, var label lbUp150 = na
+var line lUp200 = na, var label lbUp200 = na
+var line lDn50 = na, var label lbDn50 = na
+var line lDn100 = na, var label lbDn100 = na
+var line lDn150 = na, var label lbDn150 = na
+var line lDn200 = na, var label lbDn200 = na
+
+// Update High/Low and record their sequence
+if isNewSession
+    // Handle Historical Elements cleanup if disabled
+    if not showHistShading
+        box.delete(ibBox)
+    if not showHistLevels
+        line.delete(lHigh), label.delete(lbHigh)
+        line.delete(lLow), label.delete(lbLow)
+        line.delete(lQ1), label.delete(lbQ1)
+        line.delete(lMid), label.delete(lbMid)
+        line.delete(lQ3), label.delete(lbQ3)
+        line.delete(lUp50), label.delete(lbUp50)
+        line.delete(lUp100), label.delete(lbUp100)
+        line.delete(lUp150), label.delete(lbUp150)
+        line.delete(lUp200), label.delete(lbUp200)
+        line.delete(lDn50), label.delete(lbDn50)
+        line.delete(lDn100), label.delete(lbDn100)
+        line.delete(lDn150), label.delete(lbDn150)
+        line.delete(lDn200), label.delete(lbDn200)
+
+    // Reset References for new day
+    ibHigh := high
+    ibLow  := low
+    ibStartBar := bar_index
+    highBar := bar_index
+    lowBar := bar_index
+
+    lHigh := na, lbHigh := na, lLow := na, lbLow := na
+    lQ1 := na, lbQ1 := na, lMid := na, lbMid := na, lQ3 := na, lbQ3 := na
+    lUp50 := na, lbUp50 := na, lUp100 := na, lbUp100 := na, lUp150 := na, lbUp150 := na, lUp200 := na, lbUp200 := na
+    lDn50 := na, lbDn50 := na, lDn100 := na, lbDn100 := na, lDn150 := na, lbDn150 := na, lDn200 := na, lbDn200 := na
+
+    ibBox := showShading ? box.new(bar_index, high, bar_index, low, border_color = #00000000, bgcolor = shadingColor) : box(na)
+else if inSession
+    if high > ibHigh
+        ibHigh := high
+        highBar := bar_index
+    if low < ibLow
+        ibLow := low
+        lowBar := bar_index
+
+    if not na(ibBox)
+        box.set_top(ibBox, ibHigh)
+        box.set_bottom(ibBox, ibLow)
+        box.set_right(ibBox, bar_index)
+
+// Termination Logic
+lineEnd = extendLines or inNySession ? bar_index : nyEndBar
+
+if not inSession and not na(ibHigh) and not na(lineEnd)
+    if not na(ibBox)
+        box.set_right(ibBox, lineEnd)
+
+// Helper functions
+updateLine(line _l, float _y, int _x1, int _x2, color _c, string _s, int _w, bool _show) =>
+    line res = _l
+    if _show and not na(_y) and not na(_x2)
+        if na(_l)
+            res := line.new(_x1, _y, _x2, _y, xloc.bar_index, extend.none, _c, _s, _w)
+        else
+            line.set_xy1(_l, _x1, _y)
+            line.set_xy2(_l, _x2, _y)
+            line.set_color(_l, _c)
+            line.set_style(_l, _s)
+            line.set_width(_l, _w)
+    else
+        line.delete(_l)
+        res := line(na)
+    res
+
+updateLabel(label _lb, string _txt, float _y, int _x, color _c, string _sz, bool _show, bool _showPrice) =>
+    label res = _lb
+    if _show and not na(_y) and not na(_x)
+        string finalTxt = _txt + (_showPrice ? " (" + str.tostring(_y, format.mintick) + ")" : "")
+        if na(_lb)
+            res := label.new(_x, _y, finalTxt, xloc.bar_index, yloc.price, #00000000, label.style_label_left, _c, _sz)
+        else
+            label.set_xy(_lb, _x, _y)
+            label.set_text(_lb, finalTxt)
+            label.set_textcolor(_lb, _c)
+            label.set_size(_lb, _sz)
+    else
+        label.delete(_lb)
+        res := label(na)
+    res
+
+// Drawing logic
+if not inSession and not na(ibHigh) and not na(lineEnd)
+    ibRange = ibHigh - ibLow
+    isHighSecond = highBar >= lowBar
+
+    q1Val = isHighSecond ? ibHigh - 0.25 * ibRange : ibLow + 0.25 * ibRange
+    q2Val = ibLow + 0.50 * ibRange
+    q3Val = isHighSecond ? ibHigh - 0.75 * ibRange : ibLow + 0.75 * ibRange
+
+    lHigh  := updateLine(lHigh, ibHigh, ibStartBar, lineEnd, ibColor, ibStyle, ibWidth, showIbLines)
+    lbHigh := updateLabel(lbHigh, "IB High", ibHigh, lineEnd, ibColor, textSize, showIbLines, showPrice)
+    lLow   := updateLine(lLow, ibLow, ibStartBar, lineEnd, ibColor, ibStyle, ibWidth, showIbLines)
+    lbLow  := updateLabel(lbLow, "IB Low", ibLow, lineEnd, ibColor, textSize, showIbLines, showPrice)
+
+    lQ1  := updateLine(lQ1, q1Val, ibStartBar, lineEnd, qColor, qStyle, qWidth, showQuarters)
+    lbQ1 := updateLabel(lbQ1, "25%", q1Val, lineEnd, qColor, textSize, showQuarters, showPrice)
+    lMid := updateLine(lMid, q2Val, ibStartBar, lineEnd, qColor, qStyle, qWidth, showQuarters)
+    lbMid:= updateLabel(lbMid, "50%", q2Val, lineEnd, qColor, textSize, showQuarters, showPrice)
+    lQ3  := updateLine(lQ3, q3Val, ibStartBar, lineEnd, qColor, qStyle, qWidth, showQuarters)
+    lbQ3 := updateLabel(lbQ3, "75%", q3Val, lineEnd, qColor, textSize, showQuarters, showPrice)
+
+    lUp50  := updateLine(lUp50, ibHigh + ibRange * 0.5, ibStartBar, lineEnd, extUpColor, extStyle, extWidth, showExts)
+    lbUp50 := updateLabel(lbUp50, "50% Ext", ibHigh + ibRange * 0.5, lineEnd, extUpColor, textSize, showExts, showPrice)
+    lUp100 := updateLine(lUp100, ibHigh + ibRange * 1.0, ibStartBar, lineEnd, extUpColor, extStyle, extWidth, showExts)
+    lbUp100:= updateLabel(lbUp100, "100% Ext", ibHigh + ibRange * 1.0, lineEnd, extUpColor, textSize, showExts, showPrice)
+    lUp150 := updateLine(lUp150, ibHigh + ibRange * 1.5, ibStartBar, lineEnd, extUpColor, extStyle, extWidth, showExts)
+    lbUp150:= updateLabel(lbUp150, "150% Ext", ibHigh + ibRange * 1.5, lineEnd, extUpColor, textSize, showExts, showPrice)
+    lUp200 := updateLine(lUp200, ibHigh + ibRange * 2.0, ibStartBar, lineEnd, extUpColor, extStyle, extWidth, showExts)
+    lbUp200:= updateLabel(lbUp200, "200% Ext", ibHigh + ibRange * 2.0, lineEnd, extUpColor, textSize, showExts, showPrice)
+
+    lDn50  := updateLine(lDn50, ibLow - ibRange * 0.5, ibStartBar, lineEnd, extDnColor, extStyle, extWidth, showExts)
+    lbDn50 := updateLabel(lbDn50, "50% Ext", ibLow - ibRange * 0.5, lineEnd, extDnColor, textSize, showExts, showPrice)
+    lDn100 := updateLine(lDn100, ibLow - ibRange * 1.0, ibStartBar, lineEnd, extDnColor, extStyle, extWidth, showExts)
+    lbDn100:= updateLabel(lbDn100, "100% Ext", ibLow - ibRange * 1.0, lineEnd, extDnColor, textSize, showExts, showPrice)
+    lDn150 := updateLine(lDn150, ibLow - ibRange * 1.5, ibStartBar, lineEnd, extDnColor, extStyle, extWidth, showExts)
+    lbDn150:= updateLabel(lbDn150, "150% Ext", ibLow - ibRange * 1.5, lineEnd, extDnColor, textSize, showExts, showPrice)
+    lDn200 := updateLine(lDn200, ibLow - ibRange * 2.0, ibStartBar, lineEnd, extDnColor, extStyle, extWidth, showExts)
+    lbDn200:= updateLabel(lbDn200, "200% Ext", ibLow - ibRange * 2.0, lineEnd, extDnColor, textSize, showExts, showPrice)
