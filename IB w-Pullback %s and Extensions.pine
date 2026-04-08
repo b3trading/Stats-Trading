@@ -154,8 +154,8 @@ updateLabel(label _lb, string _txt, float _y, int _x, color _c, string _sz, bool
         res := label(na)
     res
 
-// Drawing logic
-if not inSession and not na(ibHigh) and not na(lineEnd)
+// Drawing logic (runs during IB for real-time updates AND after IB for extensions)
+if not na(ibHigh) and not na(lineEnd) and not na(ibStartBar)
     ibRange = ibHigh - ibLow
     isHighSecond = highBar >= lowBar
 
