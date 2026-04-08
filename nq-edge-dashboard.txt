@@ -21,9 +21,15 @@ plotIBMid      = input.bool(true, "IB Midpoint", group="Plots")
 plotExtBull    = input.bool(true, "IB Bull Extensions (+50%, +100%)", group="Plots")
 plotExtBear    = input.bool(true, "IB Bear Extensions (-50%, -100%)", group="Plots")
 plotPRTH       = input.bool(true, "Prior RTH High / Low", group="Plots")
-prthLabelOffset = input.int(5, "pRTH Label Offset (bars)", minval=1, maxval=50, group="Plots")
 plotALN        = input.bool(false, "ALN High / Low (Overnight)", group="Plots")
 plot930        = input.bool(false, "9:30 Open Line", group="Plots")
+labelOffset    = input.int(10, "Label Offset (bars)", minval=1, maxval=100, group="Plots", tooltip="How far right of the line end labels sit.")
+prthWidth      = input.int(1, "pRTH Line Width", minval=1, maxval=4, group="Plots")
+prthStyle      = input.string(line.style_solid, "pRTH Line Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Plots")
+alnWidth       = input.int(1, "ALN Line Width", minval=1, maxval=4, group="Plots")
+alnStyle       = input.string(line.style_solid, "ALN Line Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Plots")
+openWidth      = input.int(1, "9:30 Open Line Width", minval=1, maxval=4, group="Plots")
+openStyle      = input.string(line.style_solid, "9:30 Open Line Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Plots")
 bullColor      = input.color(#089981, "Bullish", group="Colors")
 bearColor      = input.color(#f23645, "Bearish", group="Colors")
 neutralColor   = input.color(#787b86, "Neutral", group="Colors")
@@ -32,7 +38,7 @@ alnColor       = input.color(#2962ff, "ALN Levels", group="Colors")
 openColor      = input.color(#e040fb, "9:30 Open", group="Colors")
 
 // ─── SESSION DETECTION ───────────────────────────────────────
-tz = "America/New_York"
+tz = input.string("America/New_York", "Timezone", group="Session", tooltip="Market timezone for session detection. Default: America/New_York (ET).")
 inSess(sess) => not na(time(timeframe.period, sess, tz))
 
 isAsia   = inSess("2000-0200")
@@ -297,9 +303,6 @@ canIB    = plotIB and isRTH and ibDone
 canMid   = plotIBMid and isRTH and ibDone
 canExtB  = plotExtBull and isRTH and ibDone
 canExtS  = plotExtBear and isRTH and ibDone
-canP     = plotPRTH and not na(pRthHi)
-canALN   = plotALN and isRTH and not na(asiaHi)
-can930   = plot930 and isRTH and not na(open930)
 
 // IB Levels
 plot(canIB  ? lockIbHi : na, "IB High", color.new(bullColor, 30), 2, plot.style_linebr)
@@ -314,52 +317,96 @@ plot(canExtB ? lockIbHi + ibRange       : na, "IB +100%", color.new(bullColor, 4
 plot(canExtS ? lockIbLo - ibRange * 0.5 : na, "IB -50%",  color.new(bearColor, 60), 1, plot.style_linebr)
 plot(canExtS ? lockIbLo - ibRange       : na, "IB -100%", color.new(bearColor, 40), 1, plot.style_linebr)
 
-// Prior RTH Levels (line objects for clean horizontals — no zig-zag)
-
-// ALN Overnight Levels
-plot(canALN ? asiaHi : na, "Asia High", color.new(alnColor, 60), 1, plot.style_linebr)
-plot(canALN ? asiaLo : na, "Asia Low",  color.new(alnColor, 60), 1, plot.style_linebr)
-plot(canALN ? lonHi  : na, "Lon High",  color.new(alnColor, 30), 1, plot.style_linebr)
-plot(canALN ? lonLo  : na, "Lon Low",   color.new(alnColor, 30), 1, plot.style_linebr)
-
-// 9:30 Open Line
-plot(can930 ? open930 : na, "9:30 Open", color.new(openColor, 40), 1, plot.style_linebr)
-
 // ═══════════════════════════════════════════════════════════════
-// pRTH LINES (start at prior NY close, end at current NY close)
+// LINE OBJECTS (pRTH, ALN, 9:30 Open — clean horizontals + labels)
 // ═══════════════════════════════════════════════════════════════
-var line  pdHiLine  = na
-var line  pdLoLine  = na
-var label pdHiLabel = na
-var label pdLoLabel = na
-var bool  pRthLinesActive = false
 
-// At RTH close: freeze old lines, start new ones
+// --- pRTH ---
+var line  pdHiLine = na, var line  pdLoLine = na
+var label pdHiLbl  = na, var label pdLoLbl  = na
+var bool  pRthActive = false
+
 if rthEnd and plotPRTH and not na(cRthHi)
-    // Freeze previous lines (stop extending)
-    pRthLinesActive := false
-    // Delete old lines/labels and create fresh ones
-    if not na(pdHiLine)
-        line.delete(pdHiLine)
-    if not na(pdLoLine)
-        line.delete(pdLoLine)
-    if not na(pdHiLabel)
-        label.delete(pdHiLabel)
-    if not na(pdLoLabel)
-        label.delete(pdLoLabel)
-    // New lines from this 4pm bar — will extend through overnight + next NY session
-    pdHiLine := line.new(bar_index, pRthHi, bar_index, pRthHi, color=color.new(prthColor, 30), width=1, style=line.style_solid)
-    pdLoLine := line.new(bar_index, pRthLo, bar_index, pRthLo, color=color.new(prthColor, 30), width=1, style=line.style_solid)
-    pdHiLabel := label.new(bar_index + prthLabelOffset, pRthHi, "PD NY High", style=label.style_none, textcolor=prthColor, size=size.normal)
-    pdLoLabel := label.new(bar_index + prthLabelOffset, pRthLo, "PD NY Low", style=label.style_none, textcolor=prthColor, size=size.normal)
-    pRthLinesActive := true
+    pRthActive := false
+    line.delete(pdHiLine), line.delete(pdLoLine)
+    label.delete(pdHiLbl), label.delete(pdLoLbl)
+    pdHiLine := line.new(bar_index, pRthHi, bar_index, pRthHi, color=color.new(prthColor, 30), width=prthWidth, style=prthStyle)
+    pdLoLine := line.new(bar_index, pRthLo, bar_index, pRthLo, color=color.new(prthColor, 30), width=prthWidth, style=prthStyle)
+    pdHiLbl  := label.new(bar_index + labelOffset, pRthHi, "PD NY High", style=label.style_none, textcolor=prthColor, size=size.normal)
+    pdLoLbl  := label.new(bar_index + labelOffset, pRthLo, "PD NY Low", style=label.style_none, textcolor=prthColor, size=size.normal)
+    pRthActive := true
 
-// Extend right edge and push label past the line end
-if pRthLinesActive and not na(pdHiLine)
-    line.set_x2(pdHiLine, bar_index)
-    line.set_x2(pdLoLine, bar_index)
-    label.set_x(pdHiLabel, bar_index + prthLabelOffset)
-    label.set_x(pdLoLabel, bar_index + prthLabelOffset)
+if pRthActive and not na(pdHiLine)
+    line.set_x2(pdHiLine, bar_index), line.set_x2(pdLoLine, bar_index)
+    label.set_x(pdHiLbl, bar_index + labelOffset), label.set_x(pdLoLbl, bar_index + labelOffset)
+
+// --- ALN (Asia + London lines — plot from session start to RTH open) ---
+var line  asHiLine = na, var line  asLoLine = na
+var label asHiLbl  = na, var label asLoLbl  = na
+var line  lnHiLine = na, var line  lnLoLine = na
+var label lnHiLbl  = na, var label lnLoLbl  = na
+var bool  alnActive = true
+
+// New day: reset ALN lines
+if newAsia and plotALN
+    line.delete(asHiLine), line.delete(asLoLine)
+    label.delete(asHiLbl), label.delete(asLoLbl)
+    line.delete(lnHiLine), line.delete(lnLoLine)
+    label.delete(lnHiLbl), label.delete(lnLoLbl)
+    asHiLine := line.new(bar_index, high, bar_index, high, color=color.new(alnColor, 60), width=alnWidth, style=alnStyle)
+    asLoLine := line.new(bar_index, low, bar_index, low, color=color.new(alnColor, 60), width=alnWidth, style=alnStyle)
+    asHiLbl  := label.new(bar_index + labelOffset, high, "Asia HIGH", style=label.style_none, textcolor=alnColor, size=size.normal)
+    asLoLbl  := label.new(bar_index + labelOffset, low, "Asia LOW", style=label.style_none, textcolor=alnColor, size=size.normal)
+    lnHiLine := na, lnLoLine := na, lnHiLbl := na, lnLoLbl := na
+    alnActive := true
+
+// Update Asia lines during Asia session
+if isAsia and plotALN and not na(asHiLine)
+    line.set_y1(asHiLine, asiaHi), line.set_y2(asHiLine, asiaHi)
+    line.set_y1(asLoLine, asiaLo), line.set_y2(asLoLine, asiaLo)
+    line.set_x2(asHiLine, bar_index), line.set_x2(asLoLine, bar_index)
+    label.set_y(asHiLbl, asiaHi), label.set_y(asLoLbl, asiaLo)
+    label.set_x(asHiLbl, bar_index + labelOffset), label.set_x(asLoLbl, bar_index + labelOffset)
+
+// London lines: start at newLondon
+if newLondon and plotALN
+    lnHiLine := line.new(bar_index, high, bar_index, high, color=color.new(alnColor, 30), width=alnWidth, style=alnStyle)
+    lnLoLine := line.new(bar_index, low, bar_index, low, color=color.new(alnColor, 30), width=alnWidth, style=alnStyle)
+    lnHiLbl  := label.new(bar_index + labelOffset, high, "London HIGH", style=label.style_none, textcolor=alnColor, size=size.normal)
+    lnLoLbl  := label.new(bar_index + labelOffset, low, "London LOW", style=label.style_none, textcolor=alnColor, size=size.normal)
+
+// Update London lines during London session
+if isLondon and plotALN and not na(lnHiLine)
+    line.set_y1(lnHiLine, lonHi), line.set_y2(lnHiLine, lonHi)
+    line.set_y1(lnLoLine, lonLo), line.set_y2(lnLoLine, lonLo)
+    line.set_x2(lnHiLine, bar_index), line.set_x2(lnLoLine, bar_index)
+    label.set_y(lnHiLbl, lonHi), label.set_y(lnLoLbl, lonLo)
+    label.set_x(lnHiLbl, bar_index + labelOffset), label.set_x(lnLoLbl, bar_index + labelOffset)
+
+// After sessions lock, extend lines until RTH open — then stop
+if alnActive and not isAsia and plotALN and not na(asHiLine)
+    line.set_x2(asHiLine, bar_index), line.set_x2(asLoLine, bar_index)
+    label.set_x(asHiLbl, bar_index + labelOffset), label.set_x(asLoLbl, bar_index + labelOffset)
+if alnActive and not isLondon and plotALN and not na(lnHiLine)
+    line.set_x2(lnHiLine, bar_index), line.set_x2(lnLoLine, bar_index)
+    label.set_x(lnHiLbl, bar_index + labelOffset), label.set_x(lnLoLbl, bar_index + labelOffset)
+
+// Stop ALN lines at RTH open
+if newRTH
+    alnActive := false
+
+// --- 9:30 Open ---
+var line  openLine = na
+var label openLbl  = na
+
+if newRTH and plot930
+    line.delete(openLine), label.delete(openLbl)
+    openLine := line.new(bar_index, open, bar_index, open, color=color.new(openColor, 40), width=openWidth, style=openStyle)
+    openLbl  := label.new(bar_index + labelOffset, open, "9:30 Open", style=label.style_none, textcolor=openColor, size=size.normal)
+
+if plot930 and not na(openLine)
+    line.set_x2(openLine, bar_index)
+    label.set_x(openLbl, bar_index + labelOffset)
 
 // ═══════════════════════════════════════════════════════════════
 // DASHBOARD TABLE
