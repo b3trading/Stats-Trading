@@ -70,13 +70,13 @@ var array<bool> zoneTouched = array.new<bool>()
 
 //──────────────────────────────────────────────────────────────────────────────
 // Create zones on BoS
-// Bullish BoS → demand zone at the swing LOW candle
-// Bearish BoS → supply zone at the swing HIGH candle
+// Bullish BoS → zone at the swing HIGH candle (the level that was broken)
+// Bearish BoS → zone at the swing LOW candle (the level that was broken)
 //──────────────────────────────────────────────────────────────────────────────
 if bullBoS
     swHiUsed := true
-    if not na(swLoBar) and not na(swLoCandleTop)
-        bx = box.new(swLoBar, swLoCandleTop, bar_index, swLoCandleBot, border_color=demandColor, bgcolor=color.new(demandColor, baseTrans), border_width=borderWidth, extend=extend.right)
+    if not na(swHiBar) and not na(swHiCandleTop)
+        bx = box.new(swHiBar, swHiCandleTop, bar_index, swHiCandleBot, border_color=demandColor, bgcolor=color.new(demandColor, baseTrans), border_width=borderWidth, extend=extend.right)
         array.push(zoneBoxes, bx)
         array.push(zoneDemand, true)
         array.push(zoneActive, true)
@@ -84,8 +84,8 @@ if bullBoS
 
 if bearBoS
     swLoUsed := true
-    if not na(swHiBar) and not na(swHiCandleTop)
-        bx = box.new(swHiBar, swHiCandleTop, bar_index, swHiCandleBot, border_color=supplyColor, bgcolor=color.new(supplyColor, baseTrans), border_width=borderWidth, extend=extend.right)
+    if not na(swLoBar) and not na(swLoCandleTop)
+        bx = box.new(swLoBar, swLoCandleTop, bar_index, swLoCandleBot, border_color=supplyColor, bgcolor=color.new(supplyColor, baseTrans), border_width=borderWidth, extend=extend.right)
         array.push(zoneBoxes, bx)
         array.push(zoneDemand, false)
         array.push(zoneActive, true)
