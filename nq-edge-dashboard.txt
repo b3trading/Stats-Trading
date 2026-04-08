@@ -21,6 +21,7 @@ plotIBMid      = input.bool(true, "IB Midpoint", group="Plots")
 plotExtBull    = input.bool(true, "IB Bull Extensions (+50%, +100%)", group="Plots")
 plotExtBear    = input.bool(true, "IB Bear Extensions (-50%, -100%)", group="Plots")
 plotPRTH       = input.bool(true, "Prior RTH High / Low", group="Plots")
+prthLabelOffset = input.int(5, "pRTH Label Offset (bars)", minval=1, maxval=50, group="Plots")
 plotALN        = input.bool(false, "ALN High / Low (Overnight)", group="Plots")
 plot930        = input.bool(false, "9:30 Open Line", group="Plots")
 bullColor      = input.color(#089981, "Bullish", group="Colors")
@@ -349,16 +350,16 @@ if rthEnd and plotPRTH and not na(cRthHi)
     // New lines from this 4pm bar — will extend through overnight + next NY session
     pdHiLine := line.new(bar_index, pRthHi, bar_index, pRthHi, color=color.new(prthColor, 30), width=1, style=line.style_solid)
     pdLoLine := line.new(bar_index, pRthLo, bar_index, pRthLo, color=color.new(prthColor, 30), width=1, style=line.style_solid)
-    pdHiLabel := label.new(bar_index, pRthHi, "PD NY High (" + str.tostring(pRthHi, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
-    pdLoLabel := label.new(bar_index, pRthLo, "PD NY Low (" + str.tostring(pRthLo, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
+    pdHiLabel := label.new(bar_index + prthLabelOffset, pRthHi, "PD NY High", style=label.style_none, textcolor=prthColor, size=size.normal)
+    pdLoLabel := label.new(bar_index + prthLabelOffset, pRthLo, "PD NY Low", style=label.style_none, textcolor=prthColor, size=size.normal)
     pRthLinesActive := true
 
-// Extend right edge and label position each bar while active
+// Extend right edge and push label past the line end
 if pRthLinesActive and not na(pdHiLine)
     line.set_x2(pdHiLine, bar_index)
     line.set_x2(pdLoLine, bar_index)
-    label.set_x(pdHiLabel, bar_index)
-    label.set_x(pdLoLabel, bar_index)
+    label.set_x(pdHiLabel, bar_index + prthLabelOffset)
+    label.set_x(pdLoLabel, bar_index + prthLabelOffset)
 
 // ═══════════════════════════════════════════════════════════════
 // DASHBOARD TABLE
