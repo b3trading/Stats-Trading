@@ -70,9 +70,7 @@ f_trim_to_limit() =>
 
 // helper: test touch
 f_touched(_top, _bot) =>
-    touchRule == "Wick touch"  ? (high >= _bot and low <= _top) :
-    touchRule == "Close inside"? (close <= _top and close >= _bot) :
-    false
+    touchRule == "Wick touch" ? (high >= _bot and low <= _top) : touchRule == "Close inside" ? (close <= _top and close >= _bot) : false
 
 // helper: find last opposite candle offset
 // Bullish BoS -> last DOWN candle (close < open)
