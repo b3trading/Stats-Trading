@@ -6,12 +6,13 @@ indicator("BoS Pre-Impulse Candle Zones", overlay=true, max_boxes_count=500)
 // Inputs
 //──────────────────────────────────────────────────────────────────────────────
 grpBos   = "BoS Detection"
-pivotLen  = input.int(5, "Swing Pivot Length", minval=1, group=grpBos, tooltip="Bars left/right for swing detection. Higher = fewer, more significant swings.")
+pivotLen  = input.int(10, "Swing Pivot Length", minval=1, group=grpBos, tooltip="Bars left/right for swing detection. Higher = fewer, more significant swings.")
 maxSearch = input.int(20, "Search Back Bars", minval=1, maxval=500, group=grpBos, tooltip="How far back to look for the pre-impulse candle.")
+minZonePts = input.float(0, "Min Zone Height (points)", minval=0, group=grpBos, tooltip="Ignore zones smaller than this. 0 = no filter.")
 
 grpZone  = "Zone Settings"
 extendBars = input.int(150, "Extend Zone Right (bars)", minval=1, maxval=5000, group=grpZone)
-maxZones   = input.int(20, "Max Zones", minval=1, maxval=200, group=grpZone)
+maxZones   = input.int(15, "Max Zones", minval=1, maxval=200, group=grpZone)
 invalidateMode = input.string("Freeze", "On Invalidation", options=["Delete", "Freeze"], group=grpZone, tooltip="Delete: remove zone. Freeze: stop extending.")
 
 grpVisual = "Visuals"
@@ -20,6 +21,7 @@ baseTrans    = input.int(80, "Zone Transparency", minval=0, maxval=100, group=gr
 touchedTrans = input.int(92, "Touched Transparency", minval=0, maxval=100, group=grpVisual)
 demandColor  = input.color(color.green, "Demand Zone Color", group=grpVisual)
 supplyColor  = input.color(color.red, "Supply Zone Color", group=grpVisual)
+borderWidth  = input.int(1, "Border Width", minval=1, maxval=4, group=grpVisual)
 
 //──────────────────────────────────────────────────────────────────────────────
 // Swing Detection
@@ -27,33 +29,23 @@ supplyColor  = input.color(color.red, "Supply Zone Color", group=grpVisual)
 ph = ta.pivothigh(high, pivotLen, pivotLen)
 pl = ta.pivotlow(low, pivotLen, pivotLen)
 
-var float swingHi    = na
-var int   swingHiBar = na
-var bool  swingHiUsed = true
+var float swingHi = na
+var float swingLo = na
 
-var float swingLo    = na
-var int   swingLoBar = na
-var bool  swingLoUsed = true
 
-// New swing confirmed — mark as unused (available for BoS)
 if not na(ph)
-    swingHi     := ph
-    swingHiBar  := bar_index - pivotLen
-    swingHiUsed := false
+    swingHi := ph
 
 if not na(pl)
-    swingLo     := pl
-    swingLoBar  := bar_index - pivotLen
-    swingLoUsed := false
+    swingLo := pl
+
+// BoS: close through swing level, only if last BoS was opposite side (or first)
+// BoS: close crosses through swing level (crossover prevents stale triggers)
+bullBoS = not na(swingHi) and close > swingHi and close[1] <= swingHi
+bearBoS = not na(swingLo) and close < swingLo and close[1] >= swingLo
 
 //──────────────────────────────────────────────────────────────────────────────
-// BoS Detection (close-based, fires once per swing)
-//──────────────────────────────────────────────────────────────────────────────
-bullBoS = not swingHiUsed and not na(swingHi) and bar_index > swingHiBar and close > swingHi
-bearBoS = not swingLoUsed and not na(swingLo) and bar_index > swingLoBar and close < swingLo
-
-//──────────────────────────────────────────────────────────────────────────────
-// Zone Storage (parallel arrays)
+// Zone Storage
 //──────────────────────────────────────────────────────────────────────────────
 var array<box>  zoneBoxes   = array.new<box>()
 var array<bool> zoneDemand  = array.new<bool>()
@@ -61,37 +53,41 @@ var array<bool> zoneActive  = array.new<bool>()
 var array<bool> zoneTouched = array.new<bool>()
 
 //──────────────────────────────────────────────────────────────────────────────
-// Find pre-impulse candle and create zone
+// Create zones on BoS
 //──────────────────────────────────────────────────────────────────────────────
 if bullBoS
-    swingHiUsed := true
     int offset = na
     for i = 1 to maxSearch
         if close[i] < open[i]
             offset := i
             break
     if not na(offset)
-        c  = demandColor
-        bx = box.new(bar_index - offset, high[offset], bar_index - offset + extendBars, low[offset], border_color=c, bgcolor=color.new(c, baseTrans), border_width=1)
-        array.push(zoneBoxes, bx)
-        array.push(zoneDemand, true)
-        array.push(zoneActive, true)
-        array.push(zoneTouched, false)
+        topZ = high[offset]
+        botZ = low[offset]
+        if minZonePts == 0 or (topZ - botZ) >= minZonePts
+            c = demandColor
+            bx = box.new(bar_index - offset, topZ, bar_index - offset + extendBars, botZ, border_color=c, bgcolor=color.new(c, baseTrans), border_width=borderWidth)
+            array.push(zoneBoxes, bx)
+            array.push(zoneDemand, true)
+            array.push(zoneActive, true)
+            array.push(zoneTouched, false)
 
 if bearBoS
-    swingLoUsed := true
     int offset = na
     for i = 1 to maxSearch
         if close[i] > open[i]
             offset := i
             break
     if not na(offset)
-        c  = supplyColor
-        bx = box.new(bar_index - offset, high[offset], bar_index - offset + extendBars, low[offset], border_color=c, bgcolor=color.new(c, baseTrans), border_width=1)
-        array.push(zoneBoxes, bx)
-        array.push(zoneDemand, false)
-        array.push(zoneActive, true)
-        array.push(zoneTouched, false)
+        topZ = high[offset]
+        botZ = low[offset]
+        if minZonePts == 0 or (topZ - botZ) >= minZonePts
+            c = supplyColor
+            bx = box.new(bar_index - offset, topZ, bar_index - offset + extendBars, botZ, border_color=c, bgcolor=color.new(c, baseTrans), border_width=borderWidth)
+            array.push(zoneBoxes, bx)
+            array.push(zoneDemand, false)
+            array.push(zoneActive, true)
+            array.push(zoneTouched, false)
 
 // Trim oldest zones if over limit
 while array.size(zoneBoxes) > maxZones
@@ -125,13 +121,17 @@ if array.size(zoneBoxes) > 0
 
         // Touch fade (first touch only)
         if not touched
-            isTouched = touchRule == "Wick touch" ? (high >= botZ and low <= topZ) : (close <= topZ and close >= botZ)
+            isTouched = false
+            if touchRule == "Wick touch"
+                isTouched := high >= botZ and low <= topZ
+            else if touchRule == "Close inside"
+                isTouched := close <= topZ and close >= botZ
             if isTouched
                 c = demand ? demandColor : supplyColor
                 box.set_bgcolor(bx, color.new(c, touchedTrans))
                 array.set(zoneTouched, idx, true)
 
-        // Invalidation: CLOSE through the zone (not just a wick)
+        // Invalidation: CLOSE through the zone
         invalid = demand ? (close < botZ) : (close > topZ)
 
         if invalid
