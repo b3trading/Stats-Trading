@@ -176,6 +176,25 @@ if isRTH and not newRTH
     cRthLo := math.min(cRthLo, low)
 
 // ═══════════════════════════════════════════════════════════════
+// RTH CLOSE — reset intraday signals (they're no longer in play)
+// ═══════════════════════════════════════════════════════════════
+rthEnd = isRTH[1] and not isRTH
+if rthEnd
+    open930  := na
+    price940 := na
+    sig940   := 0
+    hr9Open  := na
+    hr10Open := na
+    sig10am  := 0
+    ibDone   := false
+    ibSig    := 0
+    ibHiBrk  := false
+    ibLoBrk  := false
+    lockIbHi := na
+    lockIbLo := na
+    ibCloseP := na
+
+// ═══════════════════════════════════════════════════════════════
 // IB TRACKING (9:30–10:30 ET)
 // ═══════════════════════════════════════════════════════════════
 if isIB and not newRTH
@@ -337,9 +356,10 @@ if showTable and barstate.islast
     // Tally text size — one step up from body for emphasis
     tallySz = textSize == "tiny" ? size.small : textSize == "small" ? size.normal : textSize == "normal" ? size.large : size.large
 
-    // ── Header ──
-    table.cell(dash, 0, 0, "NQ EDGE",  bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-    table.cell(dash, 1, 0, "SIGNAL",   bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+    // ── Header (stands out from stat rows) ──
+    hdClr = color.new(tableLabelBg, 15)
+    table.cell(dash, 0, 0, "NQ EDGE",  bgcolor=hdClr, text_color=tClr, text_size=tallySz)
+    table.cell(dash, 1, 0, "SIGNAL",   bgcolor=hdClr, text_color=tClr, text_size=tallySz)
 
     // ── Row 1: ALN Session ──
     if alnReady
@@ -411,7 +431,7 @@ if showTable and barstate.islast
         table.cell(dash, 1, 7, "— SETTING", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
 
     // ── Row 8: Edge Rating (bold — larger text) ──
-    tallyT = str.tostring(bulls) + "▲ " + str.tostring(bears) + "▼ " + str.tostring(neuts) + "— (" + str.tostring(avail) + "/5)"
+    tallyT = str.tostring(bulls) + "▲ " + str.tostring(bears) + "▼ " + str.tostring(neuts) + "—"
     table.cell(dash, 0, 8, tallyT, bgcolor=biasClr, text_color=tClr, text_size=tallySz)
     table.cell(dash, 1, 8, focusText, bgcolor=biasClr, text_color=tClr, text_size=tallySz)
 
