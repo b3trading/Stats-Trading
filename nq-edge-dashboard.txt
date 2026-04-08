@@ -325,29 +325,40 @@ plot(canALN ? lonLo  : na, "Lon Low",   color.new(alnColor, 30), 1, plot.style_l
 plot(can930 ? open930 : na, "9:30 Open", color.new(openColor, 40), 1, plot.style_linebr)
 
 // ═══════════════════════════════════════════════════════════════
-// PRICE LABELS (pRTH — right edge of chart)
+// pRTH LINES (start at prior NY close, end at current NY close)
 // ═══════════════════════════════════════════════════════════════
 var line  pdHiLine  = na
 var line  pdLoLine  = na
 var label pdHiLabel = na
 var label pdLoLabel = na
+var bool  pRthLinesActive = false
 
-if barstate.islast and plotPRTH and not na(pRthHi)
-    // Lines
+// At RTH close: freeze old lines, start new ones
+if rthEnd and plotPRTH and not na(cRthHi)
+    // Freeze previous lines (stop extending)
+    pRthLinesActive := false
+    // Delete old lines/labels and create fresh ones
     if not na(pdHiLine)
         line.delete(pdHiLine)
     if not na(pdLoLine)
         line.delete(pdLoLine)
-    startBar = nz(pRthStartBar, bar_index)
-    pdHiLine := line.new(startBar, pRthHi, bar_index, pRthHi, color=color.new(prthColor, 30), width=1, style=line.style_solid)
-    pdLoLine := line.new(startBar, pRthLo, bar_index, pRthLo, color=color.new(prthColor, 30), width=1, style=line.style_solid)
-    // Labels
     if not na(pdHiLabel)
         label.delete(pdHiLabel)
     if not na(pdLoLabel)
         label.delete(pdLoLabel)
+    // New lines from this 4pm bar — will extend through overnight + next NY session
+    pdHiLine := line.new(bar_index, pRthHi, bar_index, pRthHi, color=color.new(prthColor, 30), width=1, style=line.style_solid)
+    pdLoLine := line.new(bar_index, pRthLo, bar_index, pRthLo, color=color.new(prthColor, 30), width=1, style=line.style_solid)
     pdHiLabel := label.new(bar_index, pRthHi, "PD NY High (" + str.tostring(pRthHi, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
     pdLoLabel := label.new(bar_index, pRthLo, "PD NY Low (" + str.tostring(pRthLo, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
+    pRthLinesActive := true
+
+// Extend right edge and label position each bar while active
+if pRthLinesActive and not na(pdHiLine)
+    line.set_x2(pdHiLine, bar_index)
+    line.set_x2(pdLoLine, bar_index)
+    label.set_x(pdHiLabel, bar_index)
+    label.set_x(pdLoLabel, bar_index)
 
 // ═══════════════════════════════════════════════════════════════
 // DASHBOARD TABLE
