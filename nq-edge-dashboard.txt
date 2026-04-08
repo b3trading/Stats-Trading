@@ -74,6 +74,9 @@ var float price940 = na
 var float hr9Open  = na
 var float hr10Open = na
 
+// pRTH start bar (for line drawing)
+var int pRthStartBar = na
+
 // 5 Tally Signals (1=bull, -1=bear, 0=neutral/pending)
 var int alnSig  = 0
 var int prthSig = 0
@@ -135,6 +138,7 @@ if newRTH
     if not na(cRthHi)
         pRthHi := cRthHi
         pRthLo := cRthLo
+        pRthStartBar := bar_index
     // Reset current session
     open930  := open
     cRthHi   := high
@@ -186,6 +190,7 @@ if rthEnd
     if not na(cRthHi)
         pRthHi := cRthHi
         pRthLo := cRthLo
+        pRthStartBar := bar_index
     // Reset intraday signals
     open930  := na
     price940 := na
@@ -333,15 +338,16 @@ if barstate.islast and plotPRTH and not na(pRthHi)
         line.delete(pdHiLine)
     if not na(pdLoLine)
         line.delete(pdLoLine)
-    pdHiLine := line.new(bar_index - 500, pRthHi, bar_index + 20, pRthHi, color=color.new(prthColor, 30), width=1, style=line.style_solid)
-    pdLoLine := line.new(bar_index - 500, pRthLo, bar_index + 20, pRthLo, color=color.new(prthColor, 30), width=1, style=line.style_solid)
+    startBar = nz(pRthStartBar, bar_index)
+    pdHiLine := line.new(startBar, pRthHi, bar_index, pRthHi, color=color.new(prthColor, 30), width=1, style=line.style_solid)
+    pdLoLine := line.new(startBar, pRthLo, bar_index, pRthLo, color=color.new(prthColor, 30), width=1, style=line.style_solid)
     // Labels
     if not na(pdHiLabel)
         label.delete(pdHiLabel)
     if not na(pdLoLabel)
         label.delete(pdLoLabel)
-    pdHiLabel := label.new(bar_index + 20, pRthHi, "PD NY High (" + str.tostring(pRthHi, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
-    pdLoLabel := label.new(bar_index + 20, pRthLo, "PD NY Low (" + str.tostring(pRthLo, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
+    pdHiLabel := label.new(bar_index, pRthHi, "PD NY High (" + str.tostring(pRthHi, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
+    pdLoLabel := label.new(bar_index, pRthLo, "PD NY Low (" + str.tostring(pRthLo, format.mintick) + ")", style=label.style_none, textcolor=prthColor, size=size.normal)
 
 // ═══════════════════════════════════════════════════════════════
 // DASHBOARD TABLE
