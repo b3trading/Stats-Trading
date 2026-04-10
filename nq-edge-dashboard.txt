@@ -1,5 +1,5 @@
 //@version=6
-indicator("NQ Edge — Statistical Dashboard", overlay=true, max_lines_count=50, max_labels_count=50, max_tables_count=2)
+indicator("NQ Edge — Statistical Dashboard", overlay=true, max_lines_count=50, max_labels_count=50)
 
 // ═══════════════════════════════════════════════════════════════
 // NQ EDGE — 5-Signal Probability Dashboard
