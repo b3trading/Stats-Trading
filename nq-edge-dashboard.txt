@@ -98,6 +98,8 @@ var int pRthStartBar = na
 
 // 5 Tally Signals (1=bull, -1=bear, 0=neutral/pending)
 var int alnSig  = 0
+var int alnPattern = 0   // 1=P1(Lon Engulfs), 2=P2(Asia Engulfs), 3=P3(Partial Up), 4=P4(Partial Down)
+var bool alnLocked = false
 var int prthSig = 0
 var int sig940  = 0
 var int sig10am = 0
@@ -119,6 +121,8 @@ if newAsia
     price940 := na
     sig940   := 0
     alnSig   := 0
+    alnPattern := 0
+    alnLocked := false
     midnightOpen := na
 
 if isAsia and not newAsia
@@ -141,10 +145,26 @@ if isLondon and not newLondon
 // ═══════════════════════════════════════════════════════════════
 
 // ALN: classify developing pattern as London unfolds vs Asia range
-if not isRTH and not na(asiaHi) and not na(lonHi)
+// Locks at 8:00am ET per nqstats.com methodology
+if not isRTH and not alnLocked and not na(asiaHi) and not na(lonHi)
     lonAbove = lonHi > asiaHi
     lonBelow = lonLo < asiaLo
-    alnSig := lonAbove and not lonBelow ? 1 : lonBelow and not lonAbove ? -1 : 0
+    if lonAbove and lonBelow
+        alnPattern := 1       // P1: London Engulfs Asia
+        alnSig := 0
+    else if not lonAbove and not lonBelow
+        alnPattern := 2       // P2: Asia Engulfs London (coiled)
+        alnSig := 0
+    else if lonAbove
+        alnPattern := 3       // P3: Partial Engulf Up
+        alnSig := 1
+    else
+        alnPattern := 4       // P4: Partial Engulf Down
+        alnSig := -1
+
+// Lock ALN at 8:00am ET (nqstats classification cutoff)
+if h >= 8 and not isRTH and not alnLocked and not na(lonHi)
+    alnLocked := true
 
 // pRTH: preview where current price sits vs prior day NY H/L
 if not isRTH and not na(cRthHi)
@@ -175,15 +195,26 @@ if newRTH
     ibSig    := 0
 
     // ── Signal 1: ALN Pattern Classification ──
-    // London broke Asia high only → 72% bull continuation
-    // London broke Asia low only  → 68% bear continuation
-    // London inside or engulfs    → ~55% neutral
-    if not na(asiaHi) and not na(lonHi)
-        lonAbove = lonHi > asiaHi
-        lonBelow = lonLo < asiaLo
-        alnSig := lonAbove and not lonBelow ? 1 : lonBelow and not lonAbove ? -1 : 0
-    else
-        alnSig := 0
+    // Already locked at 8:00am ET; fallback if somehow missed
+    if not alnLocked
+        if not na(asiaHi) and not na(lonHi)
+            lonAbove = lonHi > asiaHi
+            lonBelow = lonLo < asiaLo
+            if lonAbove and lonBelow
+                alnPattern := 1
+                alnSig := 0
+            else if not lonAbove and not lonBelow
+                alnPattern := 2
+                alnSig := 0
+            else if lonAbove
+                alnPattern := 3
+                alnSig := 1
+            else
+                alnPattern := 4
+                alnSig := -1
+        else
+            alnSig := 0
+        alnLocked := true
 
     // ── Signal 2: pRTH Open Location ──
     // Opens above pRTH high → 83.29% won't break back down
@@ -490,10 +521,13 @@ if showTable and barstate.islast
     table.cell(dash, 0, 0, "NQ EDGE",  bgcolor=hdClr, text_color=tClr, text_size=tallySz)
     table.cell(dash, 1, 0, "SIGNAL",   bgcolor=hdClr, text_color=tClr, text_size=tallySz)
 
-    // ── Row 1: ALN Session ──
+    // ── Row 1: ALN Session (4 patterns per nqstats.com) ──
     if alnReady
-        aT = alnSig == 1 ? "BULL — 72%" : alnSig == -1 ? "BEAR — 68%" : "NEUTRAL — 55%"
-        aC = alnSig == 1 ? bullColor : alnSig == -1 ? bearColor : neutralColor
+        aT = alnPattern == 1 ? "P1 LON ENGULF — 71↑ 70↓" :
+             alnPattern == 2 ? "P2 COILED — 81↑ 75↓" :
+             alnPattern == 3 ? "P3 PARTIAL UP — 81%↑" :
+             alnPattern == 4 ? "P4 PARTIAL DN — 75%↓" : "—"
+        aC = alnPattern == 3 ? bullColor : alnPattern == 4 ? bearColor : neutralColor
         table.cell(dash, 0, 1, "ALN Session", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
         table.cell(dash, 1, 1, aT, bgcolor=aC, text_color=sClr, text_size=tSz)
     else
