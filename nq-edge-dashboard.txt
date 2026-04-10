@@ -108,9 +108,11 @@ var float price940 = na
 var float hr9Open  = na
 var float hr10Open = na
 
-// Midnight Open & 3:59 Close
+// Midnight Open & 4pm Close
 var float midnightOpen = na
 var float close359     = na
+var bool  gapFilled    = false
+var int   gapDir       = 0      // 1=gapped up, -1=gapped down, 0=no gap
 
 // pRTH start bar (for line drawing)
 var int pRthStartBar = na
@@ -202,6 +204,9 @@ if newRTH
     open930  := open
     cRthHi   := high
     cRthLo   := low
+    // Gap fill tracking
+    gapFilled := false
+    gapDir := not na(close359) ? (open > close359 ? 1 : open < close359 ? -1 : 0) : 0
     // Reset IB
     ibHi     := high
     ibLo     := low
@@ -250,6 +255,13 @@ if newRTH
 if isRTH and not newRTH
     cRthHi := math.max(cRthHi, high)
     cRthLo := math.min(cRthLo, low)
+
+// Gap fill detection: price touched the 4pm close level
+if isRTH and not gapFilled and not na(close359) and gapDir != 0
+    if gapDir == 1 and low <= close359
+        gapFilled := true
+    if gapDir == -1 and high >= close359
+        gapFilled := true
 
 // ═══════════════════════════════════════════════════════════════
 // RTH CLOSE — reset intraday signals (they're no longer in play)
@@ -500,7 +512,7 @@ var label gapLbl  = na
 if rthEnd and plot359 and not na(close359)
     line.delete(gapLine), label.delete(gapLbl)
     gapLine := line.new(bar_index, close359, bar_index, close359, color=color.new(gapColor, 30), width=gapWidth, style=gapStyle)
-    gapLbl  := label.new(bar_index + labelOffset, close359, "4pm Close", style=label.style_none, textcolor=gapColor, size=size.normal)
+    gapLbl  := label.new(bar_index + labelOffset, close359, "PD Close Gap Fill", style=label.style_none, textcolor=gapColor, size=size.normal)
 
 if plot359 and not na(gapLine)
     line.set_x2(gapLine, bar_index)
@@ -541,15 +553,14 @@ if showTable and barstate.islast
     table.cell(dash, 0, 0, "NQ EDGE",  bgcolor=hdClr, text_color=tClr, text_size=tallySz)
     table.cell(dash, 1, 0, "SIGNAL",   bgcolor=hdClr, text_color=tClr, text_size=tallySz)
 
-    // ── Row 1: 4pm Close Gap Fill ──
+    // ── Row 1: Gap Fill ──
     if not na(close359)
-        gapBias = close > close359 ? "ABOVE" : close < close359 ? "BELOW" : "AT"
-        gapClr  = close > close359 ? bullColor : close < close359 ? bearColor : neutralColor
-        gT = str.tostring(math.round(close359, 2)) + " — " + gapBias
-        table.cell(dash, 0, 1, "4pm Gap Fill", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 1, gT, bgcolor=gapClr, text_color=sClr, text_size=tSz)
+        gT = gapFilled ? "Gap Filled" :
+             str.tostring(math.round(close359, 2)) + (close > close359 ? " ↓" : close < close359 ? " ↑" : "")
+        table.cell(dash, 0, 1, "Gap Fill", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 1, gT, bgcolor=neutralColor, text_color=sClr, text_size=tSz)
     else
-        table.cell(dash, 0, 1, "4pm Gap Fill", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 0, 1, "Gap Fill", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
         table.cell(dash, 1, 1, "— NO DATA", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
 
     // ── Row 2: ALN Session (4 patterns per nqstats.com) ──
