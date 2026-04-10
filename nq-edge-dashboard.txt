@@ -1,5 +1,5 @@
 //@version=6
-indicator("NQ Edge — Statistical Dashboard", overlay=true, max_lines_count=50, max_labels_count=50)
+indicator("NQ Edge — Statistical Dashboard", overlay=true, max_lines_count=50, max_labels_count=50, max_tables_count=2)
 
 // ═══════════════════════════════════════════════════════════════
 // NQ EDGE — 5-Signal Probability Dashboard
@@ -44,6 +44,25 @@ alnColor       = input.color(#2962ff, "ALN Levels", group="Colors")
 openColor      = input.color(#e040fb, "9:30 Open", group="Colors")
 midColor       = input.color(#00bcd4, "Midnight Open", group="Colors")
 gapColor       = input.color(#ffeb3b, "4pm Close Gap Fill", group="Colors")
+
+// ─── TRADE RULES ─────────────────────────────────────────────
+showRules      = input.bool(true, "Show Trade Rules", group="Trade Rules")
+rulesHeader    = input.string("MY RULES", "Header", group="Trade Rules")
+rulesFontSz    = input.string("small", "Font Size", options=["tiny","small","normal","large"], group="Trade Rules")
+rulesBg        = input.color(#2a2e39, "Background", group="Trade Rules")
+rulesHdrClr    = input.color(color.white, "Header", inline="rc", group="Trade Rules")
+rulesTxtClr    = input.color(#b2b5be, "Text", inline="rc", group="Trade Rules")
+rulesDivClr    = input.color(#434651, "Dividers", inline="rc", group="Trade Rules")
+rulesHPos      = input.string("Left", "Position", options=["Left","Center","Right"], inline="rp", group="Trade Rules")
+rulesVPos      = input.string("Bottom", "", options=["Top","Middle","Bottom"], inline="rp", group="Trade Rules")
+rule1          = input.string("Rule", "Rule 1", group="Trade Rules")
+rule2          = input.string("Rule", "Rule 2", group="Trade Rules")
+rule3          = input.string("Rule", "Rule 3", group="Trade Rules")
+rule4          = input.string("Rule", "Rule 4", group="Trade Rules")
+rule5          = input.string("Rule", "Rule 5", group="Trade Rules")
+rule6          = input.string("Rule", "Rule 6", group="Trade Rules")
+rule7          = input.string("Rule", "Rule 7", group="Trade Rules")
+rule8          = input.string("", "Rule 8", group="Trade Rules")
 
 // ─── SESSION DETECTION ───────────────────────────────────────
 tz = input.string("America/New_York", "Timezone", group="Session", tooltip="Market timezone for session detection. Default: America/New_York (ET).")
@@ -614,3 +633,58 @@ if showTable and barstate.islast
     if not tfOk
         table.cell(dash, 0, 10, "⚠ TF", bgcolor=#ffeb3b, text_color=#000000, text_size=tSz)
         table.cell(dash, 1, 10, "USE 1–10 MIN", bgcolor=#ffeb3b, text_color=#000000, text_size=tSz)
+
+// ═══════════════════════════════════════════════════════════════
+// TRADE RULES TABLE
+// ═══════════════════════════════════════════════════════════════
+var table rules = na
+if showRules and barstate.islast
+    rPos = (rulesHPos == "Left" ? "left" : rulesHPos == "Center" ? "center" : "right") + "_" + (rulesVPos == "Top" ? "top" : rulesVPos == "Middle" ? "middle" : "bottom")
+    rTblPos = rPos == "left_top" ? position.top_left :
+         rPos == "center_top" ? position.top_center :
+         rPos == "right_top" ? position.top_right :
+         rPos == "left_middle" ? position.middle_left :
+         rPos == "center_middle" ? position.middle_center :
+         rPos == "right_middle" ? position.middle_right :
+         rPos == "left_bottom" ? position.bottom_left :
+         rPos == "center_bottom" ? position.bottom_center :
+         position.bottom_right
+
+    rSz = rulesFontSz == "tiny" ? size.tiny :
+         rulesFontSz == "small" ? size.small :
+         rulesFontSz == "normal" ? size.normal :
+         size.large
+
+    // Collect non-empty rules
+    string[] ruleArr = array.new_string()
+    if rule1 != ""
+        array.push(ruleArr, rule1)
+    if rule2 != ""
+        array.push(ruleArr, rule2)
+    if rule3 != ""
+        array.push(ruleArr, rule3)
+    if rule4 != ""
+        array.push(ruleArr, rule4)
+    if rule5 != ""
+        array.push(ruleArr, rule5)
+    if rule6 != ""
+        array.push(ruleArr, rule6)
+    if rule7 != ""
+        array.push(ruleArr, rule7)
+    if rule8 != ""
+        array.push(ruleArr, rule8)
+
+    rCount = array.size(ruleArr)
+    // Header + rules (each rule gets 2 rows: text + divider)
+    rRows = 1 + rCount * 2
+    rules := table.new(rTblPos, 1, rRows, bgcolor=rulesBg, border_width=0, frame_color=rulesBg)
+
+    // Header
+    table.cell(rules, 0, 0, rulesHeader, bgcolor=rulesBg, text_color=rulesHdrClr, text_size=rSz, text_halign=text.align_center)
+
+    // Rule rows with dividers
+    for i = 0 to rCount - 1
+        rRow = 1 + i * 2
+        table.cell(rules, 0, rRow, array.get(ruleArr, i), bgcolor=rulesBg, text_color=rulesTxtClr, text_size=rSz, text_halign=text.align_left)
+        if i < rCount - 1
+            table.cell(rules, 0, rRow + 1, "", bgcolor=rulesDivClr, text_size=size.tiny)
