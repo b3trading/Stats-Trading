@@ -287,6 +287,8 @@ if rthEnd
     lockIbHi := na
     lockIbLo := na
     ibCloseP := na
+    gapFilled := false
+    gapDir   := 0
 
 // ═══════════════════════════════════════════════════════════════
 // IB TRACKING (9:30–10:30 ET)
@@ -553,87 +555,87 @@ if showTable and barstate.islast
     table.cell(dash, 0, 0, "NQ EDGE",  bgcolor=hdClr, text_color=tClr, text_size=tallySz)
     table.cell(dash, 1, 0, "SIGNAL",   bgcolor=hdClr, text_color=tClr, text_size=tallySz)
 
-    // ── Row 1: Gap Fill ──
-    if not na(close359)
-        gT = gapFilled ? "Gap Filled" :
-             str.tostring(math.round(close359, 2)) + (close > close359 ? " ↓" : close < close359 ? " ↑" : "")
-        table.cell(dash, 0, 1, "Gap Fill", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 1, gT, bgcolor=neutralColor, text_color=sClr, text_size=tSz)
-    else
-        table.cell(dash, 0, 1, "Gap Fill", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
-        table.cell(dash, 1, 1, "— NO DATA", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
-
-    // ── Row 2: ALN Session (4 patterns per nqstats.com) ──
+    // ── Row 1: ALN Session (4 patterns per nqstats.com) ──
     if alnReady
         aT = alnPattern == 1 ? "P1 LON ENGULF — 71↑ 70↓" :
              alnPattern == 2 ? "P2 COILED — 81↑ 75↓" :
              alnPattern == 3 ? "P3 PARTIAL UP — 81%↑" :
              alnPattern == 4 ? "P4 PARTIAL DN — 75%↓" : "—"
         aC = alnPattern == 3 ? bullColor : alnPattern == 4 ? bearColor : neutralColor
-        table.cell(dash, 0, 2, "ALN Session", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 2, aT, bgcolor=aC, text_color=sClr, text_size=tSz)
+        table.cell(dash, 0, 1, "ALN Session", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 1, aT, bgcolor=aC, text_color=sClr, text_size=tSz)
     else
-        table.cell(dash, 0, 2, "ALN Session", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
-        table.cell(dash, 1, 2, "— AWAITING LONDON", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 0, 1, "ALN Session", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 1, 1, "— AWAITING LONDON", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
 
-    // ── Row 3: pRTH Open ──
+    // ── Row 2: pRTH Open ──
     if prthReady
         pT = prthSig == 1 ? "GAP UP — 83%" : prthSig == -1 ? "GAP DN — 83%" : "INSIDE — 73%"
         pC = prthSig == 1 ? bullColor : prthSig == -1 ? bearColor : neutralColor
-        table.cell(dash, 0, 3, "pRTH Open", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 3, pT, bgcolor=pC, text_color=sClr, text_size=tSz)
+        table.cell(dash, 0, 2, "pRTH Open", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 2, pT, bgcolor=pC, text_color=sClr, text_size=tSz)
     else
-        table.cell(dash, 0, 3, "pRTH Open", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
-        table.cell(dash, 1, 3, "— NO PRIOR DATA", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 0, 2, "pRTH Open", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 1, 2, "— NO PRIOR DATA", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
 
-    // ── Row 4: 9:40 Candle Open ──
+    // ── Row 3: 9:40 Candle Open ──
     if s940Ready
         cT = sig940 == 1 ? "UP — 64% CONT" : "DN — 62% CONT"
         cC = sig940 == 1 ? bullColor : bearColor
-        table.cell(dash, 0, 4, "9:40 Candle Open", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 4, cT, bgcolor=cC, text_color=sClr, text_size=tSz)
+        table.cell(dash, 0, 3, "9:40 Candle Open", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 3, cT, bgcolor=cC, text_color=sClr, text_size=tSz)
     else
-        table.cell(dash, 0, 4, "9:40 Candle Open", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
-        table.cell(dash, 1, 4, "— PENDING 9:40", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 0, 3, "9:40 Candle Open", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 1, 3, "— PENDING 9:40", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
 
-    // ── Row 5: 9-10am 1H Close ──
+    // ── Row 4: 9-10am 1H Close ──
     if s10Ready
         tT = sig10am == 1 ? "GREEN — 70%" : "RED — 70%"
         tC = sig10am == 1 ? bullColor : bearColor
-        table.cell(dash, 0, 5, "9-10am 1H Close", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 5, tT, bgcolor=tC, text_color=sClr, text_size=tSz)
+        table.cell(dash, 0, 4, "9-10am 1H Close", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 4, tT, bgcolor=tC, text_color=sClr, text_size=tSz)
     else
-        table.cell(dash, 0, 5, "9-10am 1H Close", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
-        table.cell(dash, 1, 5, "— PENDING 10:00", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 0, 4, "9-10am 1H Close", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 1, 4, "— PENDING 10:00", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
 
-    // ── Row 6: IB Close Position ──
+    // ── Row 5: IB Close Position ──
     if ibReady
         iT = ibSig == 1 ? "UPPER — 81%" : "LOWER — 74%"
         iC = ibSig == 1 ? bullColor : bearColor
-        table.cell(dash, 0, 6, "IB Close", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 6, iT, bgcolor=iC, text_color=sClr, text_size=tSz)
+        table.cell(dash, 0, 5, "IB Close", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 5, iT, bgcolor=iC, text_color=sClr, text_size=tSz)
     else
-        table.cell(dash, 0, 6, "IB Close", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
-        table.cell(dash, 1, 6, "— PENDING 10:30", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 0, 5, "IB Close", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 1, 5, "— PENDING 10:30", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
 
-    // ── Row 7: IB Break (trade confirmation — not a tally signal) ──
+    // ── Row 6: IB Break (trade confirmation — not a tally signal) ──
     if ibReady
         bT = ibHiBrk and ibLoBrk ? "BOTH — EDGE GONE" : ibHiBrk ? "HIGH ↑ — 82% ↑ Bias" : ibLoBrk ? "LOW ↓ — 82% ↓ Bias" : "PENDING — 96%"
         bC = ibHiBrk and ibLoBrk ? bearColor : ibHiBrk ? bullColor : ibLoBrk ? bearColor : neutralColor
-        table.cell(dash, 0, 7, "IB Break", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 7, bT, bgcolor=bC, text_color=sClr, text_size=tSz)
+        table.cell(dash, 0, 6, "IB Break", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 6, bT, bgcolor=bC, text_color=sClr, text_size=tSz)
     else
-        table.cell(dash, 0, 7, "IB Break", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
-        table.cell(dash, 1, 7, "— WAITING FOR IB", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 0, 6, "IB Break", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 1, 6, "— WAITING FOR IB", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
 
-    // ── Row 8: IB Range ──
+    // ── Row 7: IB Range ──
     if ibReady
         rT = str.tostring(math.round(ibRange, 2)) + " pts"
-        table.cell(dash, 0, 8, "IB Range", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
-        table.cell(dash, 1, 8, rT, bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+        table.cell(dash, 0, 7, "IB Range", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 7, rT, bgcolor=hdrBg, text_color=tClr, text_size=tSz)
     else
-        table.cell(dash, 0, 8, "IB Range", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
-        table.cell(dash, 1, 8, "— SETTING", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 0, 7, "IB Range", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 1, 7, "— SETTING", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+
+    // ── Row 8: Gap Fill Price ──
+    if isRTH and not na(close359)
+        gT = gapFilled ? "Gap Filled" :
+             str.tostring(math.round(close359, 2)) + (close > close359 ? " ↓" : close < close359 ? " ↑" : "")
+        table.cell(dash, 0, 8, "Gap Fill Price", bgcolor=hdrBg, text_color=tClr, text_size=tSz)
+        table.cell(dash, 1, 8, gT, bgcolor=neutralColor, text_color=sClr, text_size=tSz)
+    else
+        table.cell(dash, 0, 8, "Gap Fill Price", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
+        table.cell(dash, 1, 8, "— PENDING 9:30", bgcolor=dimBg, text_color=dimTxt, text_size=tSz)
 
     // ── Row 9: Edge Rating (bold — larger text) ──
     tallyT = str.tostring(bulls) + "▲ " + str.tostring(bears) + "▼ " + str.tostring(neuts) + "—"
