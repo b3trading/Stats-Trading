@@ -1,0 +1,137 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+//@version=6
+indicator("No Trade Zones", "NTZ", overlay = true, max_boxes_count = 50, max_labels_count = 50)
+
+//──────────────────────────────────────────────────────────────────────────────
+// Session Inputs — shading runs from session open until session close each day
+//──────────────────────────────────────────────────────────────────────────────
+grpSess   = "Session"
+sessionTz = input.string("America/New_York", "Timezone", group = grpSess, tooltip = "Timezone used to compute the session open and close each trading day.")
+startHour = input.int(9,  "Open Hour",    minval = 0, maxval = 23, group = grpSess)
+startMin  = input.int(30, "Open Minute",  minval = 0, maxval = 59, group = grpSess)
+endHour   = input.int(16, "Close Hour",   minval = 0, maxval = 23, group = grpSess, tooltip = "Shading extends to this time. 16 = 4:00 PM NY session close.")
+endMin    = input.int(0,  "Close Minute", minval = 0, maxval = 59, group = grpSess)
+
+//──────────────────────────────────────────────────────────────────────────────
+// Appearance
+//──────────────────────────────────────────────────────────────────────────────
+grpStyle    = "Appearance"
+shadeColor  = input.color(color.new(color.red, 85), "Shade Color",  group = grpStyle)
+borderColor = input.color(color.new(color.red, 40), "Border Color", group = grpStyle)
+borderWidth = input.int(1, "Border Width", minval = 0, maxval = 4,  group = grpStyle)
+labelText   = input.string("No Trade Zone", "Label Text",           group = grpStyle)
+textColor   = input.color(color.white, "Text Color",                group = grpStyle)
+textSize    = input.string(size.normal, "Text Size", options = [size.tiny, size.small, size.normal, size.large, size.huge], group = grpStyle)
+
+//──────────────────────────────────────────────────────────────────────────────
+// Ten configurable No Trade Zones — enable, high price, low price on one row
+//──────────────────────────────────────────────────────────────────────────────
+g1  = "Zone 1"
+z1En  = input.bool(false, "Enable", group = g1,  inline = "z1")
+z1Hi  = input.float(0.0, "High",    group = g1,  inline = "z1")
+z1Lo  = input.float(0.0, "Low",     group = g1,  inline = "z1")
+
+g2  = "Zone 2"
+z2En  = input.bool(false, "Enable", group = g2,  inline = "z2")
+z2Hi  = input.float(0.0, "High",    group = g2,  inline = "z2")
+z2Lo  = input.float(0.0, "Low",     group = g2,  inline = "z2")
+
+g3  = "Zone 3"
+z3En  = input.bool(false, "Enable", group = g3,  inline = "z3")
+z3Hi  = input.float(0.0, "High",    group = g3,  inline = "z3")
+z3Lo  = input.float(0.0, "Low",     group = g3,  inline = "z3")
+
+g4  = "Zone 4"
+z4En  = input.bool(false, "Enable", group = g4,  inline = "z4")
+z4Hi  = input.float(0.0, "High",    group = g4,  inline = "z4")
+z4Lo  = input.float(0.0, "Low",     group = g4,  inline = "z4")
+
+g5  = "Zone 5"
+z5En  = input.bool(false, "Enable", group = g5,  inline = "z5")
+z5Hi  = input.float(0.0, "High",    group = g5,  inline = "z5")
+z5Lo  = input.float(0.0, "Low",     group = g5,  inline = "z5")
+
+g6  = "Zone 6"
+z6En  = input.bool(false, "Enable", group = g6,  inline = "z6")
+z6Hi  = input.float(0.0, "High",    group = g6,  inline = "z6")
+z6Lo  = input.float(0.0, "Low",     group = g6,  inline = "z6")
+
+g7  = "Zone 7"
+z7En  = input.bool(false, "Enable", group = g7,  inline = "z7")
+z7Hi  = input.float(0.0, "High",    group = g7,  inline = "z7")
+z7Lo  = input.float(0.0, "Low",     group = g7,  inline = "z7")
+
+g8  = "Zone 8"
+z8En  = input.bool(false, "Enable", group = g8,  inline = "z8")
+z8Hi  = input.float(0.0, "High",    group = g8,  inline = "z8")
+z8Lo  = input.float(0.0, "Low",     group = g8,  inline = "z8")
+
+g9  = "Zone 9"
+z9En  = input.bool(false, "Enable", group = g9,  inline = "z9")
+z9Hi  = input.float(0.0, "High",    group = g9,  inline = "z9")
+z9Lo  = input.float(0.0, "Low",     group = g9,  inline = "z9")
+
+g10 = "Zone 10"
+z10En = input.bool(false, "Enable", group = g10, inline = "z10")
+z10Hi = input.float(0.0, "High",    group = g10, inline = "z10")
+z10Lo = input.float(0.0, "Low",     group = g10, inline = "z10")
+
+//──────────────────────────────────────────────────────────────────────────────
+// State
+//──────────────────────────────────────────────────────────────────────────────
+var array<box>   zoneBoxes  = array.new<box>()
+var array<label> zoneLabels = array.new<label>()
+var int          drawnDay   = na
+
+clearAll() =>
+    while array.size(zoneBoxes) > 0
+        box.delete(array.pop(zoneBoxes))
+    while array.size(zoneLabels) > 0
+        label.delete(array.pop(zoneLabels))
+
+drawZone(enable, hi, lo, startTs, endTs) =>
+    if enable and hi != lo and not na(hi) and not na(lo)
+        top   = math.max(hi, lo)
+        bot   = math.min(hi, lo)
+        mid   = (top + bot) / 2
+        midTs = math.round((startTs + endTs) / 2)
+        bx = box.new(startTs, top, endTs, bot,
+                     xloc         = xloc.bar_time,
+                     bgcolor      = shadeColor,
+                     border_color = borderColor,
+                     border_width = borderWidth)
+        lbl = label.new(midTs, mid, labelText,
+                        xloc      = xloc.bar_time,
+                        yloc      = yloc.price,
+                        color     = #00000000,
+                        textcolor = textColor,
+                        size      = textSize,
+                        style     = label.style_label_center)
+        array.push(zoneBoxes,  bx)
+        array.push(zoneLabels, lbl)
+
+//──────────────────────────────────────────────────────────────────────────────
+// Render — draw zones for the current trading day's session on the last bar.
+// Boxes extend along the time axis from session open through session close.
+//──────────────────────────────────────────────────────────────────────────────
+if barstate.islast
+    y = year(time, sessionTz)
+    m = month(time, sessionTz)
+    d = dayofmonth(time, sessionTz)
+    currentDay = timestamp(sessionTz, y, m, d, 0, 0)
+
+    if na(drawnDay) or currentDay != drawnDay
+        clearAll()
+        startTs = timestamp(sessionTz, y, m, d, startHour, startMin)
+        endTs   = timestamp(sessionTz, y, m, d, endHour,   endMin)
+        drawZone(z1En,  z1Hi,  z1Lo,  startTs, endTs)
+        drawZone(z2En,  z2Hi,  z2Lo,  startTs, endTs)
+        drawZone(z3En,  z3Hi,  z3Lo,  startTs, endTs)
+        drawZone(z4En,  z4Hi,  z4Lo,  startTs, endTs)
+        drawZone(z5En,  z5Hi,  z5Lo,  startTs, endTs)
+        drawZone(z6En,  z6Hi,  z6Lo,  startTs, endTs)
+        drawZone(z7En,  z7Hi,  z7Lo,  startTs, endTs)
+        drawZone(z8En,  z8Hi,  z8Lo,  startTs, endTs)
+        drawZone(z9En,  z9Hi,  z9Lo,  startTs, endTs)
+        drawZone(z10En, z10Hi, z10Lo, startTs, endTs)
+        drawnDay := currentDay
