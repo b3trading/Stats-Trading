@@ -3,12 +3,10 @@
 indicator("No Trade Zones", "NTZ", overlay = true, max_boxes_count = 50, max_labels_count = 50)
 
 //──────────────────────────────────────────────────────────────────────────────
-// Session Inputs — shading runs from session open until session close each day
+// Session Inputs — shading runs from the start of the day until session close
 //──────────────────────────────────────────────────────────────────────────────
 grpSess   = "Session"
-sessionTz = input.string("America/New_York", "Timezone", group = grpSess, tooltip = "Timezone used to compute the session open and close each trading day.")
-startHour = input.int(9,  "Open Hour",    minval = 0, maxval = 23, group = grpSess)
-startMin  = input.int(30, "Open Minute",  minval = 0, maxval = 59, group = grpSess)
+sessionTz = input.string("America/New_York", "Timezone", group = grpSess, tooltip = "Timezone used to determine the start of the day (00:00) and the session close.")
 endHour   = input.int(16, "Close Hour",   minval = 0, maxval = 23, group = grpSess, tooltip = "Shading extends to this time. 16 = 4:00 PM NY session close.")
 endMin    = input.int(0,  "Close Minute", minval = 0, maxval = 59, group = grpSess)
 
@@ -22,6 +20,7 @@ borderWidth = input.int(1, "Border Width", minval = 0, maxval = 4,  group = grpS
 labelText   = input.string("No Trade Zone", "Label Text",           group = grpStyle)
 textColor   = input.color(color.white, "Text Color",                group = grpStyle)
 textSize    = input.string(size.normal, "Text Size", options = [size.tiny, size.small, size.normal, size.large, size.huge], group = grpStyle)
+labelPos    = input.string("Right", "Label Position", options = ["Left", "Center", "Right"], group = grpStyle, tooltip = "Where to place the label text inside the shaded zone.")
 
 //──────────────────────────────────────────────────────────────────────────────
 // Ten configurable No Trade Zones — enable, high price, low price on one row
@@ -91,28 +90,37 @@ clearAll() =>
 
 drawZone(enable, hi, lo, startTs, endTs) =>
     if enable and hi != lo and not na(hi) and not na(lo)
-        top   = math.max(hi, lo)
-        bot   = math.min(hi, lo)
-        mid   = (top + bot) / 2
-        midTs = math.round((startTs + endTs) / 2)
+        top = math.max(hi, lo)
+        bot = math.min(hi, lo)
+        mid = (top + bot) / 2
+
+        // Resolve label anchor and style from user setting. Background is
+        // transparent so only the text shows inside the shaded box.
+        labelX     = labelPos == "Left"  ? startTs
+                   : labelPos == "Right" ? endTs
+                   : math.round((startTs + endTs) / 2)
+        labelStyle = labelPos == "Left"  ? label.style_label_left
+                   : labelPos == "Right" ? label.style_label_right
+                   : label.style_label_center
+
         bx = box.new(startTs, top, endTs, bot,
                      xloc         = xloc.bar_time,
                      bgcolor      = shadeColor,
                      border_color = borderColor,
                      border_width = borderWidth)
-        lbl = label.new(midTs, mid, labelText,
+        lbl = label.new(labelX, mid, labelText,
                         xloc      = xloc.bar_time,
                         yloc      = yloc.price,
                         color     = #00000000,
                         textcolor = textColor,
                         size      = textSize,
-                        style     = label.style_label_center)
+                        style     = labelStyle)
         array.push(zoneBoxes,  bx)
         array.push(zoneLabels, lbl)
 
 //──────────────────────────────────────────────────────────────────────────────
-// Render — draw zones for the current trading day's session on the last bar.
-// Boxes extend along the time axis from session open through session close.
+// Render — draw zones for the current trading day on the last bar. Boxes
+// extend along the time axis from 00:00 through the configured session close.
 //──────────────────────────────────────────────────────────────────────────────
 if barstate.islast
     y = year(time, sessionTz)
@@ -122,8 +130,8 @@ if barstate.islast
 
     if na(drawnDay) or currentDay != drawnDay
         clearAll()
-        startTs = timestamp(sessionTz, y, m, d, startHour, startMin)
-        endTs   = timestamp(sessionTz, y, m, d, endHour,   endMin)
+        startTs = timestamp(sessionTz, y, m, d, 0, 0)
+        endTs   = timestamp(sessionTz, y, m, d, endHour, endMin)
         drawZone(z1En,  z1Hi,  z1Lo,  startTs, endTs)
         drawZone(z2En,  z2Hi,  z2Lo,  startTs, endTs)
         drawZone(z3En,  z3Hi,  z3Lo,  startTs, endTs)
